@@ -39,6 +39,8 @@ let recieve () =
   in
   recv_bytes ""
 
+let close_connection () = shutdown socket SHUTDOWN_SEND
+
 (**[query_input ()] is the string of a user input.*)
 let query_input () =
   match read_line () with exception End_of_file -> exit 0 | c -> c
@@ -51,8 +53,12 @@ let main () =
   connect host serv;
   print_endline "Send or Recieve?";
   match query_input () with
-  | "Send" -> send (query_input ())
-  | "Recieve" -> print_string (recieve ())
+  | "Send" ->
+      send (query_input ());
+      close_connection ()
+  | "Recieve" ->
+      print_string (recieve ());
+      close_connection ()
   | _ -> exit 0
 ;;
 

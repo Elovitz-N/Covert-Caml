@@ -17,3 +17,6 @@ val send : string -> unit
 
 val recieve : unit -> string
 (**[recieve ()] reads whatever has been written onto the socket.*)
+
+val close_connection : unit -> unit
+(**[close_connection ()] closes the connection for sending*)
