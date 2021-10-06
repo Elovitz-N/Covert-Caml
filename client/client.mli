@@ -9,7 +9,7 @@ val inst_data : user_data
 val socket : Unix.file_descr
 (**[socket] is the local socket used to connect to *)
 
-val connect : string -> unit
+val connect : string -> string -> unit
 (**[connect s] connects the socket to the server with name s*)
 
 val send : string -> unit

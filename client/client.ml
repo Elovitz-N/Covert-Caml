@@ -9,17 +9,17 @@ let inst_data = { username = ""; password = "" }
 
 let socket = socket PF_INET SOCK_STREAM 0
 
-let connect name =
+let connect host serv =
   let server_addr =
-    try (gethostbyname name).h_addr_list.(0)
+    try (gethostbyname host).h_addr_list.(0)
     with Not_found ->
-      prerr_endline (name ^ ": Host not found");
+      prerr_endline (host ^ ": Host not found");
       exit 2
   in
   let port_number =
-    try (getservbyname name "tcp").s_port
+    try (getservbyname serv "tcp").s_port
     with Not_found ->
-      prerr_endline (name ^ ": Port not found");
+      prerr_endline (serv ^ ": Port not found");
       exit 2
   in
   connect socket (ADDR_INET (server_addr, port_number))
@@ -38,3 +38,22 @@ let recieve () =
     | n -> recv_bytes (acc ^ Bytes.to_string bytes_s)
   in
   recv_bytes ""
+
+(**[query_input ()] is the string of a user input.*)
+let query_input () =
+  match read_line () with exception End_of_file -> exit 0 | c -> c
+
+let main () =
+  print_endline "Connect to host:";
+  let host = query_input () in
+  print_endline "Connect to service:";
+  let serv = query_input () in
+  connect host serv;
+  print_endline "Send or Recieve?";
+  match query_input () with
+  | "Send" -> send (query_input ())
+  | "Recieve" -> print_string (recieve ())
+  | _ -> exit 0
+;;
+
+main ()
