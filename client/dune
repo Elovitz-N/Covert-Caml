@@ -1,2 +1,4 @@
-(executable
- (name client))
+(library
+ (name client)
+ (public_name Client)
+ (libraries unix))
