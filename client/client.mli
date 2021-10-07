@@ -1,18 +1,13 @@
 (**  *)
 
-type user_data
-(***)
-
-val inst_data : user_data
-(**[inst_data] is the personal client data like username and password*)
-
 val socket : Unix.file_descr
 (**[socket] is the local socket used to connect to *)
 
 (*val local_addr : Unix.inet_addr*)
 
 val connect : string -> string -> unit
-(**[connect s] connects the socket to the server with name s*)
+(**[connect s1 s2] connects the socket to the server with host name s1
+   and service s2*)
 
 val send : string -> unit
 (**[send s] writes the [s] onto the the socket.*)

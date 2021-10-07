@@ -1,12 +1,5 @@
 open Unix
 
-type user_data = {
-  username : string;
-  password : string;
-}
-
-let inst_data = { username = ""; password = "" }
-
 let socket = socket PF_INET SOCK_STREAM 0
 
 let connect host serv =
@@ -57,8 +50,8 @@ let main () =
       send (query_input ());
       close_connection ()
   | "Recieve" ->
-      print_string (recieve ());
-      close_connection ()
+      close_connection ();
+      print_string (recieve ())
   | _ -> exit 0
 ;;
 
