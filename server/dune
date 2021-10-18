@@ -1,2 +1,4 @@
-(executable
- (name server))
+(library
+ (name database)
+ (public_name Database)
+ (libraries yojson))
