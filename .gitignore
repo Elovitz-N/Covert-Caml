@@ -11,6 +11,9 @@
 # ocamlbuild working directory
 _build/
 
+# server msg history
+data/msgs.json
+
 # ocamlbuild targets
 *.byte
 *.native
