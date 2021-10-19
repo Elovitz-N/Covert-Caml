@@ -28,6 +28,7 @@ let recieve s =
     | bytes_read ->
         let read = Bytes.sub buffer 0 bytes_read in
         let str = Bytes.to_string read in
+        (* TODO: this quit is not working *)
         if str = "quit" then exit 0
         else ignore (write stdout buffer 0 bytes_read);
         loop ()

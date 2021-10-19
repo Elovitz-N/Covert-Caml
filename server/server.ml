@@ -47,10 +47,11 @@ let rec store_msg buffer r w f =
       Out_channel.output_string oc str;
       Out_channel.close oc;
       Out_channel.flush oc;
+      (* TODO: add message here about the possibility of quitting once
+         it gets up and running *)
       send_str
-        "Message Recieved! Type \"quit\" to quit, or type another \
-         message in the format \"[name]: [msg]\" and hit enter to \
-         send: \n"
+        "Message Recieved! Type another message in the format \
+         \"[name]: [msg]\" and hit enter to send: \n"
         w;
       store_msg buffer r w f
 
