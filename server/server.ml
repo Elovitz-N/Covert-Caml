@@ -24,32 +24,47 @@ let send_msgs w f =
   else send_str "Previous messages: \n" w;
   send_lst lst w
 
-let rec store_msg buffer r =
+(* [store_msg buffer r w f] uses reader [r] to read data from [buffer]
+   and appends it to file [f]. If file [f] does not exist, [f] will be
+   created and the data in [buffer] will be written to the empty
+   file. *)
+let rec store_msg buffer r w f =
   let _ = print_string "Store msg running" in
   Reader.read r buffer >>= function
   | `Eof -> return ()
   | `Ok bytes_read ->
       let read = Bytes.sub buffer 0 bytes_read in
+      (* str now contains the data that was in the buffer, converted to
+         a string *)
       let str = Bytes.to_string read in
       let _ =
         print_string
           ("Msg Recieved: " ^ str ^ " with length "
           ^ string_of_int (String.length str))
       in
-      let oc = Out_channel.create ~append:true "../data/msgs.json" in
+      (* This is where it writes str to the file *)
+      let oc = Out_channel.create ~append:true f in
       Out_channel.output_string oc str;
       Out_channel.close oc;
       Out_channel.flush oc;
-      store_msg buffer r
+      send_str
+        "Message Recieved! Type \"quit\" to quit, or type another \
+         message in the format \"[name]: [msg]\" and hit enter to \
+         send: \n"
+        w;
+      store_msg buffer r w f
 
 (* [perform_tasks w r] performs all of the tasks that should be
    performed by the server after the server is started.*)
 let perform_tasks w r =
   print_string "here";
   send_msgs w "../data/msgs.json";
-  send_str "Type your message and hit enter to send: \n" w;
+  send_str
+    "Type your message in the format \"[name]: [msg]\" and hit enter \
+     to send: \n"
+    w;
   let buffer = Bytes.create (16 * 1024) in
-  store_msg buffer r
+  store_msg buffer r w "../data/msgs.json"
 
 (** Starts a TCP server, which listens on the specified port, calling
     all of the function in [perform_tasks] *)
