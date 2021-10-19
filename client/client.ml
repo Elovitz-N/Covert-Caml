@@ -65,6 +65,7 @@ let main () =
   let ip = Sys.argv.(1) in
   let port = int_of_string Sys.argv.(2) in
   let socket = socket PF_INET SOCK_STREAM 0 in
+  (* TODO: figure out why all these print statements never print! *)
   connect socket (ADDR_INET (inet_addr_of_string ip, port));
   print_string "what";
   match fork () with

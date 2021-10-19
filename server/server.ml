@@ -20,9 +20,14 @@ let rec send_lst l w =
 let send_msgs w f =
   let _ = print_string "here" in
   let lst = try In_channel.read_lines f with _ -> [] in
-  if List.is_empty lst then send_str "No previous messages.\n" w
-  else send_str "Previous messages: \n" w;
-  send_lst lst w
+  if List.is_empty lst then
+    (* If the file does not exist, the following lines will create the
+       file*)
+    let _ = send_str "No previous messages.\n" w in
+    Out_channel.write_all f ~data:""
+  else send_str "\nPrevious messages: \n" w;
+  send_lst lst w;
+  send_str "\n" w
 
 (* [store_msg buffer r w f] uses reader [r] to read data from [buffer]
    and appends it to file [f]. If file [f] does not exist, [f] will be
@@ -51,7 +56,7 @@ let rec store_msg buffer r w f =
          it gets up and running *)
       send_str
         "Message Recieved! Type another message in the format \
-         \"[name]: [msg]\" and hit enter to send: \n"
+         \"[name]: [msg]\" and hit enter to send: \n\n"
         w;
       store_msg buffer r w f
 
@@ -59,13 +64,13 @@ let rec store_msg buffer r w f =
    performed by the server after the server is started.*)
 let perform_tasks w r =
   print_string "here";
-  send_msgs w "../data/msgs.json";
+  send_msgs w "msgs.json";
   send_str
     "Type your message in the format \"[name]: [msg]\" and hit enter \
-     to send: \n"
+     to send: \n\n"
     w;
   let buffer = Bytes.create (16 * 1024) in
-  store_msg buffer r w "../data/msgs.json"
+  store_msg buffer r w "msgs.json"
 
 (** Starts a TCP server, which listens on the specified port, calling
     all of the function in [perform_tasks] *)
