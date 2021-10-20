@@ -53,17 +53,24 @@ let send s =
 
 let main () =
   print_string "Connecting to Server...";
-
-  (if Array.length Sys.argv < 3 then
+  (* TODO: check more aggressively to make sure host is a valid IP
+     addr *)
+  (if Array.length Sys.argv < 2 then
    let _ =
      print_string
-       "Missing Host or Port. To run, use ./client.exe <host> <port>"
+       "Missing Host IP address. To run, use ./client/client.exe <host>"
+   in
+   exit 2);
+  (if Array.length Sys.argv > 2 then
+   let _ =
+     print_string
+       "Too many arguments. To run, use ./client/client.exe <host>"
    in
    exit 2);
   print_string "what2";
 
   let ip = Sys.argv.(1) in
-  let port = int_of_string Sys.argv.(2) in
+  let port = 8886 in
   let socket = socket PF_INET SOCK_STREAM 0 in
   (* TODO: figure out why all these print statements never print! *)
   connect socket (ADDR_INET (inet_addr_of_string ip, port));
