@@ -10,7 +10,7 @@ let connect host serv =
       exit 2
   in
   let port_number =
-    try (getservbyname serv "tcp").s_port
+    try (getservbyport (int_of_string serv) "tcp").s_port
     with Not_found ->
       prerr_endline (serv ^ ": Port not found");
       exit 2
@@ -41,7 +41,7 @@ let query_input () =
 let main () =
   print_endline "Connect to host:";
   let host = query_input () in
-  print_endline "Connect to service:";
+  print_endline "Connect to port:";
   let serv = query_input () in
   connect host serv;
   print_endline "Send or Recieve?";
@@ -50,8 +50,8 @@ let main () =
       send (query_input ());
       close_connection ()
   | "Recieve" ->
-      close_connection ();
-      print_string (recieve ())
+      print_string (recieve ());
+      close_connection ()
   | _ -> exit 0
 ;;
 
