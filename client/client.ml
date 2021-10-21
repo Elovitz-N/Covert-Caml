@@ -17,13 +17,6 @@ let send_and_rec fdin fdout =
         else ignore (write fdout buffer 0 bytes_read);
         loop ()
   in
-<<<<<<< HEAD
-  let port_number =
-    try (getservbyport (int_of_string serv) "tcp").s_port
-    with Not_found ->
-      prerr_endline (serv ^ ": Port not found");
-      exit 2
-=======
   loop ()
 
 let recieve s =
@@ -39,7 +32,6 @@ let recieve s =
         if str = "quit" then exit 0
         else ignore (write stdout buffer 0 bytes_read);
         loop ()
->>>>>>> main
   in
   loop ()
 
@@ -70,23 +62,6 @@ let main () =
    exit 2);
   print_string "what2";
 
-<<<<<<< HEAD
-let main () =
-  print_endline "Connect to host:";
-  let host = query_input () in
-  print_endline "Connect to port:";
-  let serv = query_input () in
-  connect host serv;
-  print_endline "Send or Recieve?";
-  match query_input () with
-  | "Send" ->
-      send (query_input ());
-      close_connection ()
-  | "Recieve" ->
-      print_string (recieve ());
-      close_connection ()
-  | _ -> exit 0
-=======
   let ip = Sys.argv.(1) in
   let port = int_of_string Sys.argv.(2) in
   let socket = socket PF_INET SOCK_STREAM 0 in
@@ -106,7 +81,6 @@ let main () =
       recieve socket;
       close stdout;
       wait ()
->>>>>>> main
 ;;
 
 main ()
