@@ -1,6 +1,7 @@
 (** CS 3110 Fall 2021 Final Project
 
-    @author John Stawinski (jjs463) TODO: add names and net ids *)
+    @author John Stawinski (jjs463) Likita Gangireddy (lg425) 
+    Nadav Elovitz (nle9) Ria Vora (rhv26) *)
 
 (************************************************************
 
@@ -16,6 +17,9 @@
    collaboration:
 
    - John Stawinski
+   - Likita Gangireddy
+   - Nadav Elovitz
+   - Ria Vora
 
  ************************************************************)
 
