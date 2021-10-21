@@ -52,7 +52,14 @@ let send s =
   loop ()
 
 let main () =
+  (* NOTE: the issue with these statements not printing was the buffer
+     was never being flushed. To fix, I can use [fprintf "%s%!" str]
+     where the %! arg ensures that the buffer will flush. For debugging
+     within the threads, I should create and clear a log file at the
+     beginning of main and then have the threads write the debug
+     statements to the log file. *)
   print_string "Connecting to Server...";
+  print_newline ();
   (* TODO: check more aggressively to make sure host is a valid IP
      addr *)
   (if Array.length Sys.argv < 2 then
