@@ -59,7 +59,6 @@ let main () =
      beginning of main and then have the threads write the debug
      statements to the log file. *)
   print_string "Connecting to Server...";
-  print_newline ();
   (* TODO: check more aggressively to make sure host is a valid IP
      addr *)
   (if Array.length Sys.argv < 2 then
