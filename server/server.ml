@@ -5,6 +5,8 @@ open Sys
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)
 
+let msg_file = "../data/msgs.json"
+
 (* [send_lst l w] sends the list of string l using writer w. A new line
    character will be appended to each string in the list as it is sent.
    Requires: all elements in l are strings. *)
@@ -64,13 +66,13 @@ let rec store_msg buffer r w f =
    performed by the server after the server is started.*)
 let perform_tasks w r =
   print_string "here";
-  send_msgs w "msgs.json";
+  send_msgs w msg_file;
   send_str
     "Type your message in the format \"[name]: [msg]\" and hit enter \
      to send: \n\n"
     w;
   let buffer = Bytes.create (16 * 1024) in
-  store_msg buffer r w "msgs.json"
+  store_msg buffer r w msg_file
 
 (** Starts a TCP server, which listens on the specified port, calling
     all of the function in [perform_tasks] *)

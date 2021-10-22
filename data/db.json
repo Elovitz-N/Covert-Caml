@@ -1,0 +1,30 @@
+{
+  "users": [
+    {
+      "session id": "fhgjfsdaifhua2wn22nsdf",
+      "username": "jstawinski",
+      "password": "test",
+      "new messages": [
+        {
+          "username": "Likita",
+          "message": "Hey, how are you?"
+        },
+        {
+          "username": "Nadav",
+          "message": "Hi John"
+        }
+      ]
+    },
+    {
+      "session id": "sdafj434jnl34g33il4h3",
+      "username": "Likita",
+      "password": "test123",
+      "new messages": [
+        {
+          "username": "jstawinski",
+          "message": "Hey, how are you?"
+        }
+      ]
+    }
+  ]
+}
