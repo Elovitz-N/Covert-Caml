@@ -1,26 +1,42 @@
-(* module BigNum : sig type t (**[t] represents a large number*)
+type keys
+(**[keys] is the type representing a private key, public key pair.*)
 
-   val add : t -> t -> t (**[add x y] is the sum of two big numbers [x]
-   and [y].*)
+type pub_info
+(**[pub_info] is the type representing the public info used to generate
+   keys and to encrypt or decrypt.*)
 
-   val subtract : t -> t -> t (**[subtract x y] is the difference of tje
-   big numbers [x] - [y].*)
+val get_public_key : keys -> string
+(**[get_public_key k] is the public key of the public key, private key
+   pair [k] as a string.*)
 
-   val is_greater : t -> t -> bool (**[is_greater x y] is whether [x] is
-   greater than [y].*)
+val dh_pub_info : unit -> pub_info
+(**[dh_pub_info ()] is a new public info used for diffie-hellman key
+   exchange and encryption*)
 
-   val multiply : t -> t -> t (**[multiply x y] is the product of two
-   big numbers.*)
+val create_dh_keys : pub_info -> keys
+(**[create_dh_keys p] is a new private key public for diffie-hellman key
+   exchange before the shared key is generated.*)
 
-   val modulo : t -> t -> t (**[modulo x y] is the remainder when
-   dividing x by y.*)
+val create_dh_shared_key : keys -> string -> pub_info -> keys
+(**[create_dh_keys k s p] is the keys [k] updated with the shared key
+   generated using [s] as the partner's public key and p as the public
+   info.*)
 
-   val rand : int -> int -> t (**[rand n m] is a random number of size
-   between 2^(n-1) and 2^(m-1). Require: n<m*)
+val encrypt_dh : keys -> bytes -> bytes
+(**[encrypt_dh k b] is the bytes [b] encrypted using the diffie-hellman
+   shared private key in [k]*)
 
-   val pp : t -> string (**[pp x] is a string representation of x in
-   binary*) end *)
+val decrypt_dh : keys -> bytes -> bytes
+(**[decrypt_dh k b] is the bytes [b] decrypted using the diffie-hellman
+   shared private key in [k]*)
 
-val rand_prime : int -> Z.t
-(**[rand_prime n] is a pseudo-random prime with greater than ciel(n/30)
-   bits.*)
+val create_rsa_keys : unit -> keys
+(**[create_rsa_keys ()] is a new public key, private pair used for rsa
+   encryption*)
+
+val encrypt_rsa : string -> bytes -> bytes
+(**[encrypt_rsa s b] is the bytes [b] encrypted using the public key [s]*)
+
+val decrypt_rsa : keys -> bytes -> bytes
+(**[decrypt_rsa k b] is the bytes [b] decrypted using the private key
+   pair [k]*)
