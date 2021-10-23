@@ -40,3 +40,5 @@ val encrypt_rsa : string -> bytes -> bytes
 val decrypt_rsa : keys -> bytes -> bytes
 (**[decrypt_rsa k b] is the bytes [b] decrypted using the private key
    pair [k]*)
+
+val id_gen : string

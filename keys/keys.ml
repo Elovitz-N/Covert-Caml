@@ -15,6 +15,11 @@ type keys = {
   public_key : Z.t;
 }
 
+let id_gen =
+  Random.self_init ();
+  (Random.int 1073741823 |> string_of_int)
+  ^ (Random.int 1073741823 |> string_of_int)
+
 type pub_info = Z.t * Z.t
 
 let get_public_key k = Z.to_string k.public_key

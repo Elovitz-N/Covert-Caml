@@ -1,6 +1,7 @@
 open Core
 open Async
 open Sys
+open Keys
 
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)
@@ -20,7 +21,6 @@ let rec send_lst l w =
 (* [send_msgs w f] sends the messages in file f line by line using
    writer w. *)
 let send_msgs w f =
-  let _ = print_string "here" in
   let lst = try In_channel.read_lines f with _ -> [] in
   if List.is_empty lst then
     (* If the file does not exist, the following lines will create the
@@ -31,19 +31,12 @@ let send_msgs w f =
   send_lst lst w;
   send_str "\n" w
 
-(* [store_msg buffer r w f] uses reader [r] to read data from [buffer]
-   and appends it to file [f]. If file [f] does not exist, [f] will be
-   created and the data in [buffer] will be written to the empty
-   file. *)
-let rec store_msg buffer r w f =
-  let _ = print_string "Store msg running" in
-  Reader.read r buffer >>= function
-  | `Eof -> return ()
-  | `Ok bytes_read ->
-      let read = Bytes.sub buffer 0 bytes_read in
-      (* str now contains the data that was in the buffer, converted to
-         a string *)
-      let str = Bytes.to_string read in
+let handle_str str n w f =
+  let i = String.index_exn str ' ' in
+  let op = String.sub str 3 (i - 3) in
+  match op with
+  | "init" -> send_str "ok" w
+  | _ ->
       let _ =
         print_string
           ("Msg Recieved: " ^ str ^ " with length "
@@ -59,20 +52,31 @@ let rec store_msg buffer r w f =
       send_str
         "Message Recieved! Type another message in the format \
          \"[name]: [msg]\" and hit enter to send: \n\n"
-        w;
-      store_msg buffer r w f
+        w
+
+(* [store_msg buffer r w f] uses reader [r] to read data from [buffer]
+   and appends it to file [f]. If file [f] does not exist, [f] will be
+   created and the data in [buffer] will be written to the empty
+   file. *)
+let rec recieve buffer r w f =
+  Reader.read r buffer >>= function
+  | `Eof -> return ()
+  | `Ok bytes_read ->
+      let read = Bytes.sub buffer 0 bytes_read in
+      (* str now contains the data that was in the buffer, converted to
+         a string *)
+      let str = Bytes.to_string read in
+      let _ = print_string str in
+      handle_str str bytes_read w f;
+      recieve buffer r w f
 
 (* [perform_tasks w r] performs all of the tasks that should be
    performed by the server after the server is started.*)
 let perform_tasks w r =
-  print_string "here";
-  send_msgs w msg_file;
-  send_str
-    "Type your message in the format \"[name]: [msg]\" and hit enter \
-     to send: \n\n"
-    w;
   let buffer = Bytes.create (16 * 1024) in
-  store_msg buffer r w msg_file
+  recieve buffer r w msg_file
+(* old code: send_msgs w msg_file; send_str "Type your message in the
+   format \"[name]: [msg]\" and hit enter \ to send: \n\n" w; *)
 
 (** Starts a TCP server, which listens on the specified port, calling
     all of the function in [perform_tasks] *)

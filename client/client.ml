@@ -1,10 +1,14 @@
 open Sys
 open Unix
 open Printf
+open Keys
 
 (* [send_and_rec fdin fdout] sends and recieves data using a socket. If
    [fdin] is stdin and [fdout] is a socket, data is read. If [fdout] is
    stdout and [fdin] is a socket, it data is written. *)
+
+let id = id_gen
+
 let send_and_rec fdin fdout =
   let buffer_size = 4096 in
   let buffer = Bytes.create buffer_size in
@@ -29,10 +33,35 @@ let recieve s =
     | bytes_read ->
         let read = Bytes.sub buffer 0 bytes_read in
         let str = Bytes.to_string read in
+        let _ =
+          fprintf Stdlib.stdout "message from serverr: %s\n %!" str
+        in
         (* TODO: this quit is not working *)
-        if str = "quit" then exit 0
-        else ignore (write stdout buffer 0 bytes_read);
+        ignore (write stdout buffer 0 bytes_read);
         loop ()
+  in
+  loop ()
+
+let handle_str str s =
+  match str with
+  | "ok" ->
+      let _ = fprintf Stdlib.stdout "Diffie time bb %!" in
+      ""
+  | _ -> ""
+
+let recieve_init s =
+  let buffer_size = 4096 in
+  let buffer = Bytes.create buffer_size in
+  let rec loop () =
+    match read s buffer 0 buffer_size with
+    | 0 -> loop ()
+    | bytes_read -> (
+        let read = Bytes.sub buffer 0 bytes_read in
+        let str = Bytes.to_string read in
+        let _ =
+          fprintf Stdlib.stdout "message from server: %s\n %!" str
+        in
+        match handle_str str s with "complete" -> () | _ -> loop ())
   in
   loop ()
 
@@ -50,6 +79,11 @@ let send s =
         loop ()
   in
   loop ()
+
+let send_str (str : string) socket =
+  ignore (write_substring socket str 0 (String.length str))
+
+let handshake s = send_str ("op=init " ^ id) s
 
 let main () =
   (* NOTE: the issue with these statements not printing was the buffer
@@ -80,6 +114,9 @@ let main () =
   let socket = socket PF_INET SOCK_STREAM 0 in
   (* TODO: figure out why all these print statements never print! *)
   connect socket (ADDR_INET (inet_addr_of_string ip, port));
+  handshake socket;
+  send_str id socket;
+  recieve_init socket;
   match fork () with
   | 0 ->
       (* Write to socket (send a msg) *)
