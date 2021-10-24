@@ -15,10 +15,23 @@ type keys = {
   public_key : Z.t;
 }
 
-let id_gen =
+let rec id_gen n s =
   Random.self_init ();
-  (Random.int 1073741823 |> string_of_int)
-  ^ (Random.int 1073741823 |> string_of_int)
+  if n = 0 then s
+  else id_gen (n - 1) (s ^ (Random.int 1073741823 |> string_of_int))
+
+let rand_int =
+  Random.self_init ();
+  Random.int 1073741823 |> string_of_int
+
+(* op=op or op=op data...*)
+let extract_op str =
+  match String.split_on_char ' ' str with
+  | h :: t -> (
+      match String.split_on_char '=' h with
+      | x :: y :: z -> y
+      | _ -> failwith "Invalid op string")
+  | _ -> failwith "Invalid op string"
 
 type pub_info = Z.t * Z.t
 

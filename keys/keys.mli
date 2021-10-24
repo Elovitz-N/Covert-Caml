@@ -41,4 +41,8 @@ val decrypt_rsa : keys -> bytes -> bytes
 (**[decrypt_rsa k b] is the bytes [b] decrypted using the private key
    pair [k]*)
 
-val id_gen : string
+val id_gen : int -> string -> string
+
+val rand_int : string
+
+val extract_op : string -> string

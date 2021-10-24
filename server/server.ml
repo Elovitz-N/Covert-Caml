@@ -31,11 +31,26 @@ let send_msgs w f =
   send_lst lst w;
   send_str "\n" w
 
+let rand_challenge str w =
+  match String.split_on_chars ~on:[ ' ' ] str with
+  | x :: y :: z :: e ->
+      send_str
+        ("op=random_response "
+        ^ (z |> int_of_string |> ( + ) 1 |> string_of_int))
+        w
+  | _ -> ()
+
 let handle_str str n w f =
-  let i = String.index_exn str ' ' in
-  let op = String.sub str 3 (i - 3) in
+  let op = extract_op str in
   match op with
-  | "init" -> send_str "ok" w
+  | "init" -> send_str "op=ok " w
+  | "diffie" -> send_str "op=diffie_complete " w
+  | "random_challenge" -> rand_challenge str w
+  | "login" ->
+      ()
+      (* TODO - one task I can do soon is set up the session ID
+         generator and send it back to the client*)
+  | "register" -> () (* TODO *)
   | _ ->
       let _ =
         print_string
