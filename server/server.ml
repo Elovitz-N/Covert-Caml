@@ -31,6 +31,8 @@ let send_msgs w f =
   send_lst lst w;
   send_str "\n" w
 
+(* [rand_challenge str w] completes the random challenge in string [str]
+   and writes the response using writer [w]. *)
 let rand_challenge str w =
   match String.split_on_chars ~on:[ ' ' ] str with
   | x :: y :: z :: e ->
@@ -40,6 +42,9 @@ let rand_challenge str w =
         w
   | _ -> ()
 
+(* [handle_str str n w f] handles the string str sent from the client
+   based on its operation, using length [n], writer [w], and file [f] as
+   arguments in functions that it calls.*)
 let handle_str str n w f =
   let op = extract_op str in
   match op with

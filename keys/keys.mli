@@ -42,7 +42,13 @@ val decrypt_rsa : keys -> bytes -> bytes
    pair [k]*)
 
 val id_gen : int -> string -> string
+(** [id_gen n s] generates [n] random integers and returns the integers
+    concatenated together with string [s] **)
 
 val rand_int : string
+(** [rand_int] returns a random integer. **)
 
 val extract_op : string -> string
+(** [extract_op str] returns the operation extracted from string [str].
+    Raises "Invalid op string" if the string is not a valid, complete
+    server response. **)

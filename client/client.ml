@@ -3,31 +3,18 @@ open Unix
 open Printf
 open Keys
 
-(* [send_and_rec fdin fdout] sends and recieves data using a socket. If
-   [fdin] is stdin and [fdout] is a socket, data is read. If [fdout] is
-   stdout and [fdin] is a socket, it data is written. *)
-
+(* [id] is the id that the client will use to identify itself to the
+   server. This id will always be sent in plaintext.*)
 let id = id_gen 2 ""
 
+(* [rand_challenge] is the integer that the client will send to the
+   server during the server authentication process. This is used to
+   defend against replay attacks.*)
 let rand_challenge = rand_int
 
+(* [send_str str socket] writes string [str] to socket [socket]*)
 let send_str (str : string) socket =
   ignore (write_substring socket str 0 (String.length str))
-
-let send_and_rec fdin fdout =
-  let buffer_size = 4096 in
-  let buffer = Bytes.create buffer_size in
-  let rec loop () =
-    match read fdin buffer 0 buffer_size with
-    | 0 -> ()
-    | bytes_read ->
-        let read = Bytes.sub buffer 0 bytes_read in
-        let str = Bytes.to_string read in
-        if str = "quit" then exit 0
-        else ignore (write fdout buffer 0 bytes_read);
-        loop ()
-  in
-  loop ()
 
 let recieve s =
   let buffer_size = 4096 in
@@ -47,6 +34,8 @@ let recieve s =
   in
   loop ()
 
+(* [prompt_uname_pass ()] reads a username from stdin and then prompts
+   the user for a password. It returns the list [uname;pass]*)
 let prompt_uname_pass () =
   let uname = read_line () in
   let _ =
@@ -63,6 +52,9 @@ let prompt_uname_pass () =
    with | None -> failwith "Aborting due to timeout." | Some passwd -> [
    uname; passwd ]) *)
 
+(* [handle_login socket] prompts the user for their username and
+   password during login and then sends the login request to the server
+   using socket [socket].*)
 let handle_login socket =
   fprintf Stdlib.stdout "%s %!"
     "\nPlease enter your username, then hit enter.\n\n";
@@ -76,6 +68,9 @@ let handle_login socket =
       ()
   | _ -> failwith "Login Unsuccessful"
 
+(* [handle_register socket] prompts the user for their username and
+   password during registration and then sends the registration request
+   to the server using socket [socket].*)
 let handle_register socket =
   fprintf Stdlib.stdout "%s %!"
     "\nPlease enter your new username, then hit enter.\n\n";
@@ -91,6 +86,9 @@ let handle_register socket =
       handle_login socket
   | _ -> failwith "Registration Unsuccessful"
 
+(* [handle_success socket] prompts the user to either login or register
+   after the server authentication process has completed, and calls
+   [handle_login socket] or [handle_register socket].*)
 let handle_success socket : string =
   fprintf Stdlib.stdout "%s %!" "Random Challenge Succesfull\n";
   fprintf Stdlib.stdout "%s %!"
@@ -109,6 +107,10 @@ let handle_success socket : string =
       fprintf Stdlib.stdout "%s %!" "Invalid value. Please try again.\n";
       ""
 
+(* [rand_response str socket] extracts the random number challenge
+   response from the message [str] sent by the server. Calls
+   [handle_success socket] if the challenge was completed. Raises
+   "Random Challenge Failed" if the challenge was failed.*)
 let rand_response str socket =
   match String.split_on_char ' ' str with
   | x :: y :: z ->
@@ -118,6 +120,8 @@ let rand_response str socket =
       else failwith "Random Challenge Failed"
   | _ -> failwith "Random Challenge Failed"
 
+(* [handle_str str s] handles the server response [str] according to its
+   operation, and replies using socket [s]. *)
 let handle_str str s =
   let op = extract_op str in
   let _ = fprintf Stdlib.stdout "op is %s %!" op in
@@ -133,6 +137,8 @@ let handle_str str s =
   | "random_response" -> rand_response str s
   | _ -> ""
 
+(* [recieve_init s] listens for messages sent from the server on socket
+   [s] and calls [handle_str] to process the messages.*)
 let recieve_init s =
   let buffer_size = 4096 in
   let buffer = Bytes.create buffer_size in
@@ -164,6 +170,8 @@ let send s =
   in
   loop ()
 
+(* [handshake s] sends the message to the server using socket [s] that
+   initializes the handshake*)
 let handshake s = send_str ("op=init " ^ id) s
 
 let main () =
