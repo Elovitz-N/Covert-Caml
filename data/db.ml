@@ -11,6 +11,7 @@
    password. We need a function to delete new messages based on a
    session id. We need a function to write a session ID value based on a
    username*)
+open Yojson.Basic.Util
 
 type user = {
   id : string;
