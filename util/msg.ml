@@ -1,8 +1,26 @@
+open Keys
+
 type msg = {
   op : string;
   id : string;
   r : int;
+  mod_p : Z.t;
+  prim_root_p : Z.t;
+  pub_key_client : string;
+  pub_key_server : string;
 }
+
+(* [empty_msg] is an message initialized with unimportant values. *)
+let empty_msg =
+  {
+    op = "";
+    id = "";
+    r = 0;
+    mod_p = Z.zero;
+    prim_root_p = Z.zero;
+    pub_key_client = "";
+    pub_key_server = "";
+  }
 
 (* [process lst msg] processes the list of strings lst and outputs a
    message corresponding to the arguments in the strings.*)
@@ -16,6 +34,13 @@ let rec process lst msg =
           | "op" -> process t { msg with op = y }
           | "r" -> process t { msg with r = int_of_string y }
           | "id" -> process t { msg with id = y }
+          | "mod_p" -> process t { msg with mod_p = Z.of_string y }
+          | "prim_root_p" ->
+              process t { msg with prim_root_p = Z.of_string y }
+          | "pub_key_client" ->
+              process t { msg with pub_key_client = y }
+          | "pub_key_server" ->
+              process t { msg with pub_key_server = y }
           | _ -> process t msg)
       | _ -> msg)
   | [] -> msg
@@ -25,33 +50,18 @@ let rec process lst msg =
 let str_to_msg str =
   (* NOTE: every time the msg type is updated, make sure to update the
      msg variable*)
-  let msg = { op = ""; id = ""; r = 0 } in
   let lst = String.split_on_char ' ' str in
-  process lst msg
+  process lst empty_msg
 
 (* [msg_to_str msg] converts msg [msg] into a string ready to be sent
    between the client and server *)
 let msg_to_str msg =
+  (* NOTE: update this as fields are added to msg *)
   "op=" ^ msg.op ^ " id=" ^ msg.id ^ " r=" ^ string_of_int msg.r
+  ^ " mod_p=" ^ Z.to_string msg.mod_p ^ " prim_root_p="
+  ^ Z.to_string msg.prim_root_p
+  ^ " pub_key_client=" ^ msg.pub_key_client ^ " pub_key_server="
+  ^ msg.pub_key_server
 
-(* [extract_op str] returns the operation extracted from string [str].
-   Raises "Invalid op string" if the string cannot be parsed. Requires:
-   [str] is in the form "op=[val]..." *)
-let extract_op str =
-  match String.split_on_char ' ' str with
-  | h :: t -> (
-      match String.split_on_char '=' h with
-      | x :: y :: z -> y
-      | _ -> failwith "Invalid op string")
-  | _ -> failwith "Invalid op string"
-
-(* [extract_r str] returns the random value "r" extracted from string
-   [str]. Raises "Invalid r string" if the string cannot be parsed.
-   Requires: [str] is in the form "op=[val] [id] r=[val] ..." *)
-let extract_r str =
-  match String.split_on_char '=' str with
-  | x :: y :: z :: e -> (
-      match String.split_on_char ' ' z with
-      | h :: t -> h
-      | _ -> failwith "Invalid r string")
-  | _ -> failwith "Invalid r string"
+let extract_pub_info msg =
+  { mod_p = msg.mod_p; prim_root_p = msg.prim_root_p }

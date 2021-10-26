@@ -45,8 +45,30 @@ let rand_challenge msg w =
 let handle_msg msg w f =
   match msg.op with
   | "init" -> send_str (msg_to_str { msg with op = "ok" }) w
-  | "diffie" ->
-      send_str (msg_to_str { msg with op = "diffie_complete" }) w
+  | "diffie_1" ->
+      let dh_keys = msg |> extract_pub_info |> create_dh_keys in
+      let new_keys =
+        create_dh_shared_key dh_keys msg.pub_key_client
+          (extract_pub_info msg)
+      in
+      let shared_key = match new_keys.private_key with x, y -> y in
+      let _ =
+        print_string ("\nshared key is " ^ Z.to_string shared_key)
+      in
+      let other_key = match new_keys.private_key with x, y -> x in
+      print_string
+        ("\nother key is " ^ Z.to_string (Z.mul other_key shared_key));
+      send_str
+        (msg_to_str
+           {
+             msg with
+             op = "diffie_2";
+             pub_key_server =
+               msg |> extract_pub_info |> create_dh_keys
+               |> get_public_key;
+           })
+        w
+  | "diffie_3" -> ()
   | "random_challenge" -> rand_challenge msg w
   | "login" ->
       ()

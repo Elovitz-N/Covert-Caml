@@ -13,6 +13,8 @@ let uid = id_gen 2 ""
    defend against replay attacks.*)
 let rand_challenge = rand_int
 
+let dh_pub_info = dh_pub_info ()
+
 (* [send_str str socket] writes string [str] to socket [socket]. Note:
    all strings sent to the server must start with "op=[op] [id]". If the
    string contains a random challenge (which most do), then the string
@@ -124,12 +126,45 @@ let rand_response msg socket =
 let handle_msg msg s =
   match msg.op with
   | "ok" ->
-      send_str (msg_to_str { op = "diffie"; id = uid; r = 0 }) s;
+      send_str
+        (msg_to_str
+           {
+             msg with
+             op = "diffie_1";
+             id = uid;
+             r = 0;
+             mod_p = dh_pub_info.mod_p;
+             prim_root_p = dh_pub_info.prim_root_p;
+             pub_key_client =
+               dh_pub_info |> create_dh_keys |> get_public_key;
+           })
+        s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman initiating\n";
+      ""
+  | "diffie_2" ->
+      let dh_keys = msg |> extract_pub_info |> create_dh_keys in
+      let new_keys =
+        create_dh_shared_key dh_keys msg.pub_key_server
+          (extract_pub_info msg)
+      in
+      let shared_key = match new_keys.private_key with x, y -> y in
+      let _ =
+        fprintf Stdlib.stdout "%s %!"
+          ("shared key is " ^ Z.to_string shared_key)
+      in
+      let other_key = match new_keys.private_key with x, y -> x in
+      fprintf Stdlib.stdout "%s %!"
+        ("\nother key is " ^ Z.to_string (Z.mul other_key shared_key));
+      send_str
+        (msg_to_str
+           { msg with op = "random_challenge"; id = uid; r = rand_int })
+        s;
+      fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";
       ""
   | "diffie_complete" ->
       send_str
-        (msg_to_str { op = "random_challenge"; id = uid; r = rand_int })
+        (msg_to_str
+           { msg with op = "random_challenge"; id = uid; r = rand_int })
         s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";
       ""
@@ -174,7 +209,7 @@ let send s =
 (* [handshake s] sends the message to the server using socket [s] that
    initializes the handshake*)
 let handshake s =
-  send_str (msg_to_str { op = "init"; id = uid; r = 0 }) s
+  send_str (msg_to_str { empty_msg with op = "init"; id = uid }) s
 
 let main () =
   (* NOTE: the issue with these statements not printing was the buffer

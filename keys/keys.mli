@@ -1,7 +1,13 @@
-type keys
+type keys = {
+  private_key : Z.t * Z.t;
+  public_key : Z.t;
+}
 (**[keys] is the type representing a private key, public key pair.*)
 
-type pub_info
+type pub_info = {
+  mod_p : Z.t;
+  prim_root_p : Z.t;
+}
 (**[pub_info] is the type representing the public info used to generate
    keys and to encrypt or decrypt.*)
 
