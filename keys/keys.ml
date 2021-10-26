@@ -72,10 +72,30 @@ let create_dh_shared_key keys their_key pub_key =
   in
   { keys with private_key = (fst keys.private_key, shared_key) }
 
-let encrypt_dh k b p = Z.(snd k.private_key * b mod p.mod_p)
+(**[split_string s] is a list consisting of [s] split into 16-character
+   strings except for the last element which may be fewer characters.
+   Example: [split_string "01234567890123456789"] is
+   [\["0123456789012345";"6789"\]] *)
+let rec split_string s =
+  if s = "" then []
+  else
+    String.sub s 0 (min (String.length s) 16)
+    :: split_string
+         (String.sub s
+            (min (String.length s) 16)
+            (max (String.length s - min (String.length s) 16) 0))
 
-let decrypt_dh k b p =
-  Z.(b * invert (snd k.private_key) p.mod_p mod p.mod_p)
+let encrypt_dh k s =
+  let shared_key = snd k.private_key in
+  (* let encrypt_sub x = () in List.map encrypt_sub (split_string s) *)
+  Z.(to_bits (of_bits s lxor shared_key))
+
+let rec trim_string s =
+  if String.sub s (String.length s - 1) 1 = "\000" then
+    trim_string (String.sub s 0 (String.length s - 1))
+  else s
+
+let decrypt_dh k s = trim_string (encrypt_dh k s)
 
 let create_rsa_keys () =
   let p = rand_prime 2048 in

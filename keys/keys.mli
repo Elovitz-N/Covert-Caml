@@ -22,13 +22,13 @@ val create_dh_shared_key : keys -> string -> pub_info -> keys
    generated using [s] as the partner's public key and p as the public
    info.*)
 
-val encrypt_dh : keys -> bytes -> pub_info -> bytes
-(**[encrypt_dh k b p] is the bytes [b] encrypted using the
+val encrypt_dh : keys -> pub_info -> string -> bytes
+(**[encrypt_dh k p s] is the string [s] encrypted using the
    diffie-hellman shared private key in [k] and the public mod from [p].*)
 
-val decrypt_dh : keys -> bytes -> pub_info -> bytes
-(**[decrypt_dh k b] is the bytes [b] decrypted using the diffie-hellman
-   shared private key in [k] and the public mod from [p].*)
+val decrypt_dh : keys -> pub_info -> string -> bytes
+(**[decrypt_dh k p s] is the string [s] decrypted using the
+   diffie-hellman shared private key in [k] and the public mod from [p].*)
 
 val create_rsa_keys : unit -> keys
 (**[create_rsa_keys ()] is a new public key, private pair used for rsa
