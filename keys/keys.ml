@@ -90,6 +90,8 @@ let encrypt_dh k s =
   (* let encrypt_sub x = () in List.map encrypt_sub (split_string s) *)
   Z.(to_bits (of_bits s lxor shared_key))
 
+(**[trim_string s] is [s] with all characters [\000] removed from the
+   end.*)
 let rec trim_string s =
   if String.sub s (String.length s - 1) 1 = "\000" then
     trim_string (String.sub s 0 (String.length s - 1))
