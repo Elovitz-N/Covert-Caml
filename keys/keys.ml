@@ -22,26 +22,7 @@ let rec id_gen n s =
 
 let rand_int =
   Random.self_init ();
-  Random.int 1073741823 |> string_of_int
-
-(* op=op or op=op data...*)
-let extract_op str =
-  match String.split_on_char ' ' str with
-  | h :: t -> (
-      match String.split_on_char '=' h with
-      | x :: y :: z -> y
-      | _ -> failwith "Invalid op string")
-  | _ -> failwith "Invalid op string"
-
-let extract_r str =
-  match String.split_on_char '=' str with
-  | x :: y :: z :: e -> (
-      match String.split_on_char ' ' z with
-      | h :: t -> h
-      | _ -> failwith "Invalid r string")
-  | _ -> failwith "Invalid r string"
-
-type pub_info = Z.t * Z.t
+  Random.int 1073741823
 
 type pub_info = {
   mod_p : Z.t;

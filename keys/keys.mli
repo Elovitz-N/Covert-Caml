@@ -22,11 +22,11 @@ val create_dh_shared_key : keys -> string -> pub_info -> keys
    generated using [s] as the partner's public key and p as the public
    info.*)
 
-val encrypt_dh : keys -> bytes -> pub_info -> bytes
+val encrypt_dh : keys -> Z.t -> pub_info -> Z.t
 (**[encrypt_dh k b p] is the bytes [b] encrypted using the
    diffie-hellman shared private key in [k] and the public mod from [p].*)
 
-val decrypt_dh : keys -> bytes -> pub_info -> bytes
+val decrypt_dh : keys -> Z.t -> pub_info -> Z.t
 (**[decrypt_dh k b] is the bytes [b] decrypted using the diffie-hellman
    shared private key in [k] and the public mod from [p].*)
 
@@ -46,15 +46,5 @@ val id_gen : int -> string -> string
 (** [id_gen n s] generates [n] random integers and returns the integers
     concatenated together with string [s] **)
 
-val rand_int : string
+val rand_int : int
 (** [rand_int] returns a random integer. **)
-
-val extract_op : string -> string
-(** [extract_op str] returns the operation extracted from string [str].
-    Raises "Invalid op string" if the string cannot be parsed. Requires:
-    [str] is in the form "op=[val]..." **)
-
-val extract_r : string -> string
-(** [extract_r str] returns the random value "r" extracted from string
-    [str]. Raises "Invalid r string" if the string cannot be parsed.
-    Requires: [str] is in the form "op=[val] [id] r=[val] ..." **)

@@ -2,10 +2,11 @@ open Sys
 open Unix
 open Printf
 open Keys
+open Util.Msg
 
-(* [id] is the id that the client will use to identify itself to the
+(* [uid] is the id that the client will use to identify itself to the
    server. This id will always be sent in plaintext.*)
-let id = id_gen 2 ""
+let uid = id_gen 2 ""
 
 (* [rand_challenge] is the integer that the client will send to the
    server during the server authentication process. This is used to
@@ -65,7 +66,7 @@ let handle_login socket =
   | uname :: passwd :: e ->
       fprintf Stdlib.stdout "%s %!" "\nLogging in...\n";
       send_str
-        ("op=login " ^ id ^ " " ^ "username=" ^ uname ^ " "
+        ("op=login id=" ^ uid ^ " " ^ "username=" ^ uname ^ " "
        ^ "password=" ^ passwd)
         socket;
       ()
@@ -81,7 +82,7 @@ let handle_register socket =
   | uname :: passwd :: e ->
       fprintf Stdlib.stdout "%s %!" "\nRegistering...\n";
       send_str
-        ("op=register " ^ id ^ " " ^ "username=" ^ uname ^ " "
+        ("op=register id=" ^ uid ^ " " ^ "username=" ^ uname ^ " "
        ^ "password=" ^ passwd)
         socket;
       fprintf Stdlib.stdout "%s %!"
@@ -114,30 +115,29 @@ let handle_success socket : string =
    response from the message [str] sent by the server. Calls
    [handle_success socket] if the challenge was completed. Raises
    "Random Challenge Failed" if the challenge was failed.*)
-let rand_response str socket =
-  if extract_r str |> int_of_string = int_of_string rand_challenge + 1
-  then handle_success socket
+let rand_response msg socket =
+  if msg.r = rand_challenge + 1 then handle_success socket
   else failwith "Random Challenge Failed"
 
-(* [handle_str str s] handles the server response [str] according to its
+(* [handle_msg str s] handles the server response [msg] according to its
    operation, and replies using socket [s]. *)
-let handle_str str s =
-  let op = extract_op str in
-  let _ = fprintf Stdlib.stdout "op is %s %!" op in
-  match op with
+let handle_msg msg s =
+  match msg.op with
   | "ok" ->
-      send_str ("op=diffie " ^ id) s;
+      send_str (msg_to_str { op = "diffie"; id = uid; r = 0 }) s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman initiating\n";
       ""
   | "diffie_complete" ->
-      send_str ("op=random_challenge " ^ id ^ " r=" ^ rand_int) s;
+      send_str
+        (msg_to_str { op = "random_challenge"; id = uid; r = rand_int })
+        s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";
       ""
-  | "random_response" -> rand_response str s
+  | "random_response" -> rand_response msg s
   | _ -> ""
 
 (* [recieve_init s] listens for messages sent from the server on socket
-   [s] and calls [handle_str] to process the messages.*)
+   [s] and calls [handle_msg] to process the messages.*)
 let recieve_init s =
   let buffer_size = 4096 in
   let buffer = Bytes.create buffer_size in
@@ -150,7 +150,9 @@ let recieve_init s =
         let _ =
           fprintf Stdlib.stdout "message from server: %s\n %!" str
         in
-        match handle_str str s with "complete" -> () | _ -> loop ())
+        match handle_msg (str_to_msg str) s with
+        | "complete" -> ()
+        | _ -> loop ())
   in
   loop ()
 
@@ -171,7 +173,8 @@ let send s =
 
 (* [handshake s] sends the message to the server using socket [s] that
    initializes the handshake*)
-let handshake s = send_str ("op=init " ^ id) s
+let handshake s =
+  send_str (msg_to_str { op = "init"; id = uid; r = 0 }) s
 
 let main () =
   (* NOTE: the issue with these statements not printing was the buffer

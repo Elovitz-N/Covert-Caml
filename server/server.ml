@@ -2,6 +2,7 @@ open Core
 open Async
 open Sys
 open Keys
+open Util.Msg
 
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)
@@ -31,38 +32,32 @@ let send_msgs w f =
   send_lst lst w;
   send_str "\n" w
 
-(* [rand_challenge str w] completes the random challenge in string [str]
-   and writes the response using writer [w]. *)
-let rand_challenge str w =
-  let r = extract_r str in
+(* [rand_challenge msg w] completes the random challenge in message
+   [msg] and writes the response using writer [w]. *)
+let rand_challenge msg w =
   send_str
-    ("op=random_response r="
-    ^ (r |> int_of_string |> ( + ) 1 |> string_of_int))
+    (msg_to_str { msg with r = msg.r + 1; op = "random_response" })
     w
 
-(* [handle_str str n w f] handles the string str sent from the client
-   based on its operation, using length [n], writer [w], and file [f] as
-   arguments in functions that it calls.*)
-let handle_str str n w f =
-  let op = extract_op str in
-  match op with
-  | "init" -> send_str "op=ok " w
-  | "diffie" -> send_str "op=diffie_complete " w
-  | "random_challenge" -> rand_challenge str w
+(* [handle_msg msg w f] handles the string str sent from the client
+   based on its operation, using writer [w] and file [f] as arguments in
+   functions that it calls.*)
+let handle_msg msg w f =
+  match msg.op with
+  | "init" -> send_str (msg_to_str { msg with op = "ok" }) w
+  | "diffie" ->
+      send_str (msg_to_str { msg with op = "diffie_complete" }) w
+  | "random_challenge" -> rand_challenge msg w
   | "login" ->
       ()
       (* TODO - one task I can do soon is set up the session ID
          generator and send it back to the client*)
   | "register" -> () (* TODO *)
   | _ ->
-      let _ =
-        print_string
-          ("Msg Recieved: " ^ str ^ " with length "
-          ^ string_of_int (String.length str))
-      in
+      let _ = print_string ("Msg Recieved: " ^ msg_to_str msg) in
       (* This is where it writes str to the file *)
       let oc = Out_channel.create ~append:true f in
-      Out_channel.output_string oc str;
+      Out_channel.output_string oc (msg_to_str msg);
       Out_channel.close oc;
       Out_channel.flush oc;
       (* TODO: add message here about the possibility of quitting once
@@ -85,7 +80,8 @@ let rec recieve buffer r w f =
          a string *)
       let str = Bytes.to_string read in
       let _ = print_string str in
-      handle_str str bytes_read w f;
+      let msg = str_to_msg str in
+      handle_msg msg w f;
       recieve buffer r w f
 
 (* [perform_tasks w r] performs all of the tasks that should be
