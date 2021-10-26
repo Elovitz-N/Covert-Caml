@@ -3,7 +3,7 @@ type keys
 
 type pub_info
 (**[pub_info] is the type representing the public info used to generate
-   keys and to encrypt or decrypt.*)
+   keys.*)
 
 val get_public_key : keys -> string
 (**[get_public_key k] is the public key of the public key, private key
@@ -22,13 +22,15 @@ val create_dh_shared_key : keys -> string -> pub_info -> keys
    generated using [s] as the partner's public key and p as the public
    info.*)
 
-val encrypt_dh : keys -> pub_info -> string -> bytes
-(**[encrypt_dh k p s] is the string [s] encrypted using the
-   diffie-hellman shared private key in [k] and the public mod from [p].*)
+val encrypt_dh : keys -> string -> bytes
+(**[encrypt_dh k s] is the string [s] encrypted using the diffie-hellman
+   shared private key in [k]. Requires: [k] has had a shared key
+   generated using [create_dh_shared_key].*)
 
-val decrypt_dh : keys -> pub_info -> string -> bytes
-(**[decrypt_dh k p s] is the string [s] decrypted using the
-   diffie-hellman shared private key in [k] and the public mod from [p].*)
+val decrypt_dh : keys -> string -> bytes
+(**[decrypt_dh k s] is the string [s] decrypted using the diffie-hellman
+   shared private key in [k]. Requires: [k] has had a shared key
+   generated using [create_dh_shared_key].*)
 
 val create_rsa_keys : unit -> keys
 (**[create_rsa_keys ()] is a new public key, private pair used for rsa
