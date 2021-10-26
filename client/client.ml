@@ -12,7 +12,10 @@ let id = id_gen 2 ""
    defend against replay attacks.*)
 let rand_challenge = rand_int
 
-(* [send_str str socket] writes string [str] to socket [socket]*)
+(* [send_str str socket] writes string [str] to socket [socket]. Note:
+   all strings sent to the server must start with "op=[op] [id]". If the
+   string contains a random challenge (which most do), then the string
+   must start with "op=[op] [id] r=[r]"*)
 let send_str (str : string) socket =
   ignore (write_substring socket str 0 (String.length str))
 
@@ -112,13 +115,9 @@ let handle_success socket : string =
    [handle_success socket] if the challenge was completed. Raises
    "Random Challenge Failed" if the challenge was failed.*)
 let rand_response str socket =
-  match String.split_on_char ' ' str with
-  | x :: y :: z ->
-      let response = int_of_string y in
-      if response = int_of_string rand_challenge + 1 then
-        handle_success socket
-      else failwith "Random Challenge Failed"
-  | _ -> failwith "Random Challenge Failed"
+  if extract_r str |> int_of_string = int_of_string rand_challenge + 1
+  then handle_success socket
+  else failwith "Random Challenge Failed"
 
 (* [handle_str str s] handles the server response [str] according to its
    operation, and replies using socket [s]. *)
@@ -131,7 +130,7 @@ let handle_str str s =
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman initiating\n";
       ""
   | "diffie_complete" ->
-      send_str ("op=random_challenge " ^ id ^ " " ^ rand_int) s;
+      send_str ("op=random_challenge " ^ id ^ " r=" ^ rand_int) s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";
       ""
   | "random_response" -> rand_response str s

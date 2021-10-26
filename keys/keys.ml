@@ -33,6 +33,14 @@ let extract_op str =
       | _ -> failwith "Invalid op string")
   | _ -> failwith "Invalid op string"
 
+let extract_r str =
+  match String.split_on_char '=' str with
+  | x :: y :: z :: e -> (
+      match String.split_on_char ' ' z with
+      | h :: t -> h
+      | _ -> failwith "Invalid r string")
+  | _ -> failwith "Invalid r string"
+
 type pub_info = Z.t * Z.t
 
 let get_public_key k = Z.to_string k.public_key

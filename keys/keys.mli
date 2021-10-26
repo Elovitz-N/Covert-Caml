@@ -50,5 +50,10 @@ val rand_int : string
 
 val extract_op : string -> string
 (** [extract_op str] returns the operation extracted from string [str].
-    Raises "Invalid op string" if the string is not a valid, complete
-    server response. **)
+    Raises "Invalid op string" if the string cannot be parsed. Requires:
+    [str] is in the form "op=[val]..." **)
+
+val extract_r : string -> string
+(** [extract_r str] returns the random value "r" extracted from string
+    [str]. Raises "Invalid r string" if the string cannot be parsed.
+    Requires: [str] is in the form "op=[val] [id] r=[val] ..." **)

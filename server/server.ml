@@ -34,13 +34,11 @@ let send_msgs w f =
 (* [rand_challenge str w] completes the random challenge in string [str]
    and writes the response using writer [w]. *)
 let rand_challenge str w =
-  match String.split_on_chars ~on:[ ' ' ] str with
-  | x :: y :: z :: e ->
-      send_str
-        ("op=random_response "
-        ^ (z |> int_of_string |> ( + ) 1 |> string_of_int))
-        w
-  | _ -> ()
+  let r = extract_r str in
+  send_str
+    ("op=random_response r="
+    ^ (r |> int_of_string |> ( + ) 1 |> string_of_int))
+    w
 
 (* [handle_str str n w f] handles the string str sent from the client
    based on its operation, using length [n], writer [w], and file [f] as
