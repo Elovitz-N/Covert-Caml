@@ -28,8 +28,8 @@ type pub_info = {
 
 let get_public_key k = Z.to_string k.public_key
 
-(**[gen_p q] is a arbitrary precision prime p where [p-1] has [q] as a
-   factor.*)
+(**[gen_p q] is a tuple of an arbitrary precision prime p where [p-1]
+   has [q] as a factor, and the dividend of [p-1] and [q].*)
 let gen_p q =
   let rec gen_p_tr q acc =
     let p = Z.(succ (q * acc)) in
@@ -93,7 +93,6 @@ let rec split_string s =
 
 let encrypt_dh k s =
   let shared_key = snd k.private_key in
-  (* let encrypt_sub x = () in List.map encrypt_sub (split_string s) *)
   Z.(to_bits (of_bits s lxor shared_key))
 
 (**[trim_string s] is [s] with all characters [\000] removed from the

@@ -1,4 +1,7 @@
-type keys
+type keys = {
+  private_key : Z.t * Z.t;
+  public_key : Z.t;
+}
 (**[keys] is the type representing a private key, public key pair.*)
 
 type pub_info
