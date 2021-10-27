@@ -1,10 +1,16 @@
-(*[rand n] is a random positive integer of size ciel(m/30) bits.*)
+(**[pow a b] is [a] to the power of [b]. Requires: [b >= 0].*)
+let rec pow a b = match b with 0 -> 1 | n -> a * pow a (b - 1)
+
+(**[rand_prime n] is a random prime of at least n bits.*)
 let rand_prime n =
+  (*[rand n] is a random positive integer of size n bits.*)
   let rand n =
     Random.self_init ();
     let rec big_string_int m =
       if m <= 0 then ""
-      else string_of_int (Random.bits ()) ^ big_string_int (m - 30)
+      else
+        string_of_int (Random.int (pow 2 (min m 30) - 1))
+        ^ big_string_int (m - 30)
     in
     Z.of_string (big_string_int n)
   in

@@ -22,12 +22,12 @@ val create_dh_shared_key : keys -> string -> pub_info -> keys
    generated using [s] as the partner's public key and p as the public
    info.*)
 
-val encrypt_dh : keys -> string -> bytes
+val encrypt_dh : keys -> string -> string
 (**[encrypt_dh k s] is the string [s] encrypted using the diffie-hellman
    shared private key in [k]. Requires: [k] has had a shared key
    generated using [create_dh_shared_key].*)
 
-val decrypt_dh : keys -> string -> bytes
+val decrypt_dh : keys -> string -> string
 (**[decrypt_dh k s] is the string [s] decrypted using the diffie-hellman
    shared private key in [k]. Requires: [k] has had a shared key
    generated using [create_dh_shared_key].*)
