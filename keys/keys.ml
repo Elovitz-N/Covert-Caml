@@ -85,11 +85,11 @@ let create_dh_shared_key keys their_key pub_key =
 let rec split_string s =
   if s = "" then []
   else
-    String.sub s 0 (min (String.length s) 16)
+    let block_length = min (String.length s) 16 in
+    String.sub s 0 block_length
     :: split_string
-         (String.sub s
-            (min (String.length s) 16)
-            (max (String.length s - min (String.length s) 16) 0))
+         (String.sub s block_length
+            (max (String.length s - block_length) 0))
 
 let encrypt_dh k s =
   let shared_key = snd k.private_key in
@@ -98,8 +98,8 @@ let encrypt_dh k s =
 (**[trim_string s] is [s] with all characters [\000] removed from the
    end.*)
 let rec trim_string s =
-  if String.sub s (String.length s - 1) 1 = "\000" then
-    trim_string (String.sub s 0 (String.length s - 1))
+  if Str.last_chars s 1 = "\000" then
+    trim_string (Str.string_before s (String.length s - 1))
   else s
 
 let decrypt_dh k s = trim_string (encrypt_dh k s)
