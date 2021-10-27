@@ -65,7 +65,7 @@ let handle_msg msg w f =
              op = "diffie_2";
              pub_key_server =
                msg |> extract_pub_info |> create_dh_keys
-               |> get_public_key;
+               |> dh_get_public_key;
            })
         w
   | "diffie_3" -> ()

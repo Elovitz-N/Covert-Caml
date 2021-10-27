@@ -136,7 +136,7 @@ let handle_msg msg s =
              mod_p = dh_pub_info.mod_p;
              prim_root_p = dh_pub_info.prim_root_p;
              pub_key_client =
-               dh_pub_info |> create_dh_keys |> get_public_key;
+               dh_pub_info |> create_dh_keys |> dh_get_public_key;
            })
         s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman initiating\n";

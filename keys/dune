@@ -1,4 +1,4 @@
 (library
  (name keys)
  (public_name Keys)
- (libraries zarith))
+ (libraries zarith str))
