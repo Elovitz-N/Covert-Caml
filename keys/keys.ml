@@ -125,7 +125,8 @@ let create_rsa_keys () =
   let n = Z.mul p q in
   let phi_n = Z.((p - one) * (q - one)) in
   let rec gen_e acc =
-    if Z.gcd acc phi_n = Z.one then acc else gen_e (Z.succ acc)
+    if Z.gcd acc phi_n = Z.one then acc
+    else gen_e (acc |> Z.succ |> Z.succ)
   in
   let e = gen_e Z.(of_int 3) in
   let d = Z.invert e phi_n in

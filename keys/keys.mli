@@ -7,7 +7,7 @@ type dh_keys = {
 
 type pub_info
 (**[pub_info] is the type representing the public info used to generate
-   keys.*)
+   keys in Diffie Hellman.*)
 
 val dh_get_public_key : dh_keys -> string
 (**[dh_get_public_key k] is the public key of the Diffie-Hellamn public
@@ -49,11 +49,10 @@ val create_rsa_keys : unit -> rsa_keys
    encryption.*)
 
 val encrypt_rsa : string * string -> string -> string list
-(**[encrypt_rsa k s] is list of encrypted string blocks string [s]
-   encrypted using the RSA public key pair in [k] into blocks smaller
-   than the size of the public modulus. Requires: [k] is public key
-   generated using [create_rsa_keys]*)
+(**[encrypt_rsa k s] is the string [s] encrypted using the RSA public
+   key pair [k] into blocks smaller than the size of the public modulus.
+   Requires: [k] is public key generated using [create_rsa_keys]*)
 
 val decrypt_rsa : rsa_keys -> string list -> string
-(**[decrypt_rsa k s] is the string [s] decrypted using the private key
-   in [k].*)
+(**[decrypt_rsa k s] is the list of encrypted string blocks [s]
+   decrypted using the private key in [k].*)
