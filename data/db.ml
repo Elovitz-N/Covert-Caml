@@ -23,7 +23,7 @@ type password = string
 
 exception DNE of session_id
 
-let person = `Assoc [ ("name", `String "Anil") ]
+(*let person = `Assoc [ ("name", `String "Anil") ] *)
 
 type msg = {
   sender : username;
