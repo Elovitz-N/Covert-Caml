@@ -121,13 +121,13 @@ let encrypt_dh k s =
   let shared_key = snd k.private_key in
   let plain_txt = split_string s (Z.numbits shared_key / 8) in
   List.map
-    (fun x -> Z.(to_string (of_string x lxor shared_key)))
+    (fun x -> Z.(to_string (of_bits x lxor shared_key)))
     plain_txt
 
 let decrypt_dh k s =
   let shared_key = snd k.private_key in
   let plain_txt =
-    List.map (fun x -> Z.(to_string (of_string x lxor shared_key))) s
+    List.map (fun x -> Z.(to_bits (of_string x lxor shared_key))) s
   in
   List.fold_left (fun x y -> x ^ trim_string y) "" plain_txt
 
@@ -157,13 +157,13 @@ let encrypt_rsa k s =
   let modulo = Z.of_string (snd k) in
   let plain_txt = split_string s (Z.numbits modulo / 8) in
   List.map
-    (fun x -> Z.(to_string (powm (of_string x) exp modulo)))
+    (fun x -> Z.(to_string (powm (of_bits x) exp modulo)))
     plain_txt
 
 let decrypt_rsa k s =
   let exp = k.private_key in
   let modulo = snd k.public_key in
   let plain_txt =
-    List.map (fun x -> Z.(to_string (powm (of_string x) exp modulo))) s
+    List.map (fun x -> Z.(to_bits (powm (of_string x) exp modulo))) s
   in
   List.fold_left (fun x y -> x ^ trim_string y) "" plain_txt
