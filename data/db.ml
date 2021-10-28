@@ -105,6 +105,11 @@ let get_new_msgs (id : session_id) (chat : t) =
    [id]. *)
 let get_dh_key (id : session_id) = failwith "unimplemented"
 
+(* [put_dh_key id key] stores the dh key associated with session id [id]
+   in the json file. *)
+let put_dh_key (id : session_id) (key : string) =
+  failwith "unimplemented"
+
 (* [put_uname id] replaces the username in the database file with the
    specified username [new_uname] associated with the session id [id].
    Raises "DNE" if that session id does not exist. *)
