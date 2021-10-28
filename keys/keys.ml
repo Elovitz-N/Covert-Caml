@@ -26,7 +26,7 @@ type pub_info = {
   prim_root_p : Z.t;
 }
 
-let dh_get_public_key k = Z.to_bits k.public_key
+let dh_get_public_key k = Z.to_string k.public_key
 
 (**[gen_p q] is a tuple of an arbitrary precision prime p where [p-1]
    has [q] as a factor, and the dividend of [p-1] and [q].*)
@@ -72,7 +72,7 @@ let create_dh_keys pub_info =
   }
 
 let create_dh_shared_key keys their_key pub_key =
-  let their_key = Z.of_bits their_key in
+  let their_key = Z.of_string their_key in
   let shared_key =
     Z.powm their_key (fst keys.private_key) pub_key.mod_p
   in
@@ -102,12 +102,14 @@ let rec trim_string s =
 let encrypt_dh k s =
   let shared_key = snd k.private_key in
   let plain_txt = split_string s (Z.numbits shared_key / 8) in
-  List.map (fun x -> Z.(to_bits (of_bits x lxor shared_key))) plain_txt
+  List.map
+    (fun x -> Z.(to_string (of_bits x lxor shared_key)))
+    plain_txt
 
 let decrypt_dh k s =
   let shared_key = snd k.private_key in
   let plain_txt =
-    List.map (fun x -> Z.(to_bits (of_bits x lxor shared_key))) s
+    List.map (fun x -> Z.(to_bits (of_string x lxor shared_key))) s
   in
   List.fold_left (fun x y -> x ^ trim_string y) "" plain_txt
 
@@ -117,7 +119,7 @@ type rsa_keys = {
 }
 
 let rsa_get_public_key k =
-  (Z.to_bits (fst k.public_key), Z.to_bits (snd k.public_key))
+  (Z.to_string (fst k.public_key), Z.to_string (snd k.public_key))
 
 let create_rsa_keys () =
   let p = rand_prime 1536 in
@@ -133,17 +135,17 @@ let create_rsa_keys () =
   { private_key = d; public_key = (e, n) }
 
 let encrypt_rsa k s =
-  let exp = Z.of_bits (fst k) in
-  let modulo = Z.of_bits (snd k) in
+  let exp = Z.of_string (fst k) in
+  let modulo = Z.of_string (snd k) in
   let plain_txt = split_string s (Z.numbits modulo / 8) in
   List.map
-    (fun x -> Z.(to_bits (powm (of_bits x) exp modulo)))
+    (fun x -> Z.(to_string (powm (of_bits x) exp modulo)))
     plain_txt
 
 let decrypt_rsa k s =
   let exp = k.private_key in
   let modulo = snd k.public_key in
   let plain_txt =
-    List.map (fun x -> Z.(to_bits (powm (of_bits x) exp modulo))) s
+    List.map (fun x -> Z.(to_bits (powm (of_string x) exp modulo))) s
   in
   List.fold_left (fun x y -> x ^ trim_string y) "" plain_txt
