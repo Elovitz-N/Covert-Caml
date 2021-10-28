@@ -118,14 +118,14 @@ let rec trim_string s =
   else s
 
 let encrypt_dh k s =
-  let shared_key = snd k.private_key in
+  let shared_key = Z.of_string k in
   let plain_txt = split_string s (Z.numbits shared_key / 8) in
   List.map
     (fun x -> Z.(to_string (of_bits x lxor shared_key)))
     plain_txt
 
 let decrypt_dh k s =
-  let shared_key = snd k.private_key in
+  let shared_key = Z.of_string k in
   let plain_txt =
     List.map (fun x -> Z.(to_bits (of_string x lxor shared_key))) s
   in

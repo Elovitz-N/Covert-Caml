@@ -1,6 +1,7 @@
 open OUnit2
 open Yojson.Basic.Util
 open Keys
+open Util.Msg
 
 let test (name : string) input expected_output : test =
   name >:: fun _ -> assert_equal expected_output input
@@ -37,7 +38,27 @@ let keys_tests =
        let k2 = create_dh_shared_key k2 pub1 p in
        let s = rand_string () in
        test "DH encrypt then decrypt keeps a string the same"
-         (s |> encrypt_dh k1 |> decrypt_dh k2)
+         (s
+         |> encrypt_dh (Z.to_string (snd k1.private_key))
+         |> decrypt_dh (Z.to_string (snd k2.private_key)))
+         s)
+      100
+  @ test_many
+      (let p = dh_pub_info () in
+       let k1 = create_dh_keys p in
+       let k2 = create_dh_keys p in
+       let pub1 = dh_get_public_key k1 in
+       let pub2 = dh_get_public_key k2 in
+       let k1 = create_dh_shared_key k1 pub2 p in
+       let k2 = create_dh_shared_key k2 pub1 p in
+       let s = rand_string () in
+       test
+         "DH encrypt then decrypt using str breaking and concatenating \
+          fctns keeps a string the same"
+         (s
+         |> encrypt_dh (Z.to_string (snd k1.private_key))
+         |> dh_lst_to_str |> dh_str_to_lst
+         |> decrypt_dh (Z.to_string (snd k2.private_key)))
          s)
       100
   @ test_many
@@ -52,3 +73,9 @@ let keys_tests =
 let suite = "Testing" >::: List.flatten [ keys_tests ]
 
 let _ = run_test_tt_main suite
+
+(* - encrypt str with encrypt_dh k s, which outputs a str list -
+   concatenate strings in the str list the seperator "BREAK_HERE" using
+   dh_list_to_str - send that string over - break that str back into a
+   list with dh_str_to_lst - decrypt that string with decrypt_dh k s,
+   which takes in a str list and outputs a str *)

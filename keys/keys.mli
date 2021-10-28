@@ -29,12 +29,12 @@ val create_dh_shared_key : dh_keys -> string -> pub_info -> dh_keys
    generated using [s] as the partner's public key and p as the public
    info.*)
 
-val encrypt_dh : dh_keys -> string -> string list
+val encrypt_dh : string -> string -> string list
 (**[encrypt_dh k s] is the string [s] encrypted in blocks using the
    diffie-hellman shared private key in [k]. Requires: [k] has had a
    shared key generated using [create_dh_shared_key].*)
 
-val decrypt_dh : dh_keys -> string list -> string
+val decrypt_dh : string -> string list -> string
 (**[decrypt_dh k s] is the list of encrypted string blocks [s] decrypted
    using the diffie-hellman shared private key in [k]. Requires: [k] has
    had a shared key generated using [create_dh_shared_key].*)

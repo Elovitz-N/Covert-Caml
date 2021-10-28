@@ -64,6 +64,24 @@ let handle_msg msg w f =
              mod_p = pub_info.mod_p;
              prim_root_p = pub_info.prim_root_p;
              pub_key_client = msg.pub_key_client;
+             dh_encrypted =
+               encrypt_dh
+                 (Z.to_string shared_key)
+                 "encryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption test \
+                  blah"
+               |> dh_lst_to_str;
            })
         w
   | "diffie_3" -> ()

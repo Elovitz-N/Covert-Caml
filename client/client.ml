@@ -161,6 +161,12 @@ let handle_msg msg s =
         fprintf Stdlib.stdout "%s %!"
           ("shared key is " ^ Z.to_string shared_key)
       in
+      let decrypted_msg =
+        msg.dh_encrypted |> dh_str_to_lst
+        |> decrypt_dh (Z.to_string shared_key)
+      in
+      fprintf Stdlib.stdout "%s %!"
+        ("\n\ndecrypted message is: " ^ decrypted_msg ^ "\n\n");
       send_str
         (msg_to_str
            { msg with op = "random_challenge"; id = uid; r = rand_int })
