@@ -15,6 +15,8 @@ let rand_challenge = rand_int
 
 let dh_pub_info = dh_pub_info ()
 
+let dh_keys = create_dh_keys dh_pub_info
+
 (* [send_str str socket] writes string [str] to socket [socket]. Note:
    all strings sent to the server must start with "op=[op] [id]". If the
    string contains a random challenge (which most do), then the string
@@ -135,14 +137,21 @@ let handle_msg msg s =
              r = 0;
              mod_p = dh_pub_info.mod_p;
              prim_root_p = dh_pub_info.prim_root_p;
-             pub_key_client =
-               dh_pub_info |> create_dh_keys |> dh_get_public_key;
+             pub_key_client = dh_keys |> dh_get_public_key;
            })
         s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman initiating\n";
       ""
   | "diffie_2" ->
-      let dh_keys = msg |> extract_pub_info |> create_dh_keys in
+      assert (msg.prim_root_p = dh_pub_info.prim_root_p);
+      assert (msg.mod_p = dh_pub_info.mod_p);
+      fprintf Stdlib.stdout
+        "\n\n\
+         client public key is %s, client key sent from server is %s \n\n\
+        \ %!" msg.pub_key_client
+        (dh_keys |> dh_get_public_key);
+
+      assert (msg.pub_key_client = (dh_keys |> dh_get_public_key));
       let new_keys =
         create_dh_shared_key dh_keys msg.pub_key_server
           (extract_pub_info msg)
@@ -152,9 +161,6 @@ let handle_msg msg s =
         fprintf Stdlib.stdout "%s %!"
           ("shared key is " ^ Z.to_string shared_key)
       in
-      let other_key = match new_keys.private_key with x, y -> x in
-      fprintf Stdlib.stdout "%s %!"
-        ("\nother key is " ^ Z.to_string (Z.mul other_key shared_key));
       send_str
         (msg_to_str
            { msg with op = "random_challenge"; id = uid; r = rand_int })
