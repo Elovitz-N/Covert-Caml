@@ -108,7 +108,7 @@ let rec change_username id new_uname user_list =
   match user_list with
   | [] -> raise (DNE id)
   | h :: t ->
-      if h.session_id = id then h.username = new_uname
+      if h.session_id = id then h.username <- new_uname
       else change_username id new_uname t
 
 let put_uname (id : string) (new_uname : string) (chat : t) =
@@ -118,7 +118,7 @@ let rec change_password id new_password user_list =
   match user_list with
   | [] -> raise (DNE id)
   | h :: t ->
-      if h.session_id = id then h.password = new_password
+      if h.session_id = id then h.password <- new_password
       else change_password id new_password t
 
 (* [put_passwd id] replaces the password in the database file with the
