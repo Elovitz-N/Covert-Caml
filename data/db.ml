@@ -101,6 +101,10 @@ let rec get_new_msgs_helper id user_list =
 let get_new_msgs (id : session_id) (chat : t) =
   get_new_msgs_helper id chat.users
 
+(* [get_dh_key id] returns the dh key associated with session id
+   [id]. *)
+let get_dh_key (id : session_id) = failwith "unimplemented"
+
 (* [put_uname id] replaces the username in the database file with the
    specified username [new_uname] associated with the session id [id].
    Raises "DNE" if that session id does not exist. *)
