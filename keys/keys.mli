@@ -62,6 +62,7 @@ val id_gen : int -> string -> string
 
 val rand_int : int
 (** [rand_int] returns a random integer. **)
+
 val decrypt_rsa : rsa_keys -> string list -> string
 (**[decrypt_rsa k s] is the list of encrypted string blocks [s]
    decrypted using the private key in [k].*)
