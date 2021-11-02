@@ -67,6 +67,30 @@ let get_users json =
 
 let from_json json = { users = get_users json }
 
+let to_json t =
+  `Assoc
+    [
+      ( "users",
+        `List
+          (t.users
+          |> List.map (fun x ->
+                 `Assoc
+                   [
+                     ("session id", `String x.session_id);
+                     ("username", `String x.username);
+                     ("password", `String x.password);
+                     ( "new messages",
+                       `List
+                         (x.messages
+                         |> List.map (fun x ->
+                                `Assoc
+                                  [
+                                    ("username", `String x.sender);
+                                    ("message", `String x.msg);
+                                  ])) );
+                   ])) );
+    ]
+
 let rec get_username_helper id user_list =
   match user_list with
   | [] -> raise (DNE id)
