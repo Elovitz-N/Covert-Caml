@@ -23,7 +23,7 @@ type password = string
 
 exception DNE of session_id
 
-let person = `Assoc [ ("name", `String "Anil") ]
+(*let person = `Assoc [ ("name", `String "Anil") ] *)
 
 type msg = {
   sender : username;
@@ -124,6 +124,15 @@ let rec get_new_msgs_helper id user_list =
    exist.*)
 let get_new_msgs (id : session_id) (chat : t) =
   get_new_msgs_helper id chat.users
+
+(* [get_dh_key id] returns the dh key associated with session id
+   [id]. *)
+let get_dh_key (id : session_id) = failwith "unimplemented"
+
+(* [put_dh_key id key] stores the dh key associated with session id [id]
+   in the json file. *)
+let put_dh_key (id : session_id) (key : string) =
+  failwith "unimplemented"
 
 (* [put_uname id] replaces the username in the database file with the
    specified username [new_uname] associated with the session id [id].
