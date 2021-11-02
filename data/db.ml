@@ -12,6 +12,7 @@
    session id. We need a function to write a session ID value based on a
    username*)
 open Yojson.Basic.Util
+open Yojson.Basic
 
 let file = "db.json"
 
@@ -161,4 +162,61 @@ let delete_msg (uname : string) (msg : msg) = failwith "unimplemented"
 
 (* [list_unames] returns a list of all the usernames in the database
    file. *)
-let list_unames : string list = failwith "unimplemented"
+let list_unames () = failwith "unimplemented"
+
+let update_1 key (v : Yojson.Basic.t) (json : Yojson.Basic.t) =
+  let rec update_json_obj = function
+    | [] -> failwith "empty obj"
+    | ((k, v') as m) :: tl ->
+        let _ = print_string ("\nk = " ^ k ^ "\n") in
+        if k = key then (k, v) :: tl else m :: update_json_obj tl
+  in
+  match json with
+  | `Assoc obj -> `Assoc (update_json_obj obj)
+  | _ -> json
+
+let rec update_list key v check_k check_v (json : Yojson.Basic.t list) =
+  match json with
+  | h :: t ->
+      let cv = h |> member check_k in
+      if cv = check_v then
+        match h |> member key with
+        | `String v' ->
+            let _ = print_string "match found" in
+            update_1 key v h :: t
+        | `List messages ->
+            print_string "\n deep deep list found \n";
+            let j = v :: messages in
+            update_1 key (`List j) h :: t
+        | _ -> failwith "dfa"
+      else h :: update_list key v check_k check_v t
+  | [] -> json
+
+let update_json_obj obj key v check_k check_v =
+  match obj with
+  | [] -> failwith "empty obj"
+  | (k, v') :: tl -> (
+      match v' with
+      | `List x ->
+          print_string "\ndeep list found\n";
+          let updated = update_list key v check_k check_v x in
+          ("users", `List updated) :: tl
+      | _ -> failwith "uhu")
+
+let update key v check_k check_v (json : Yojson.Basic.t) =
+  match json with
+  | `Assoc obj ->
+      print_string "assoc found";
+      `Assoc (update_json_obj obj key v check_k check_v)
+  | _ -> json
+
+let test_write () =
+  print_string "testing";
+  print_newline ();
+  let j = from_file "../data/db.json" in
+  let new_j =
+    update "username" (`String "test6") "session id"
+      (`String "sdafj434jnl34g33il4h3") j
+  in
+  to_file "../data/test.json" new_j;
+  print_newline ()

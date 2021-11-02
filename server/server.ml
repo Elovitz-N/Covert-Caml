@@ -3,6 +3,7 @@ open Async
 open Sys
 open Keys
 open Util.Msg
+open Data.Db
 
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)
@@ -144,6 +145,6 @@ let run () =
       : (Socket.Address.Inet.t, int) Tcp.Server.t Deferred.t)
 
 (* Call [run], and then start the scheduler *)
-let () =
-  run ();
-  never_returns (Scheduler.go ())
+(* let () = run (); never_returns (Scheduler.go ()) *)
+
+let word = test_write ()
