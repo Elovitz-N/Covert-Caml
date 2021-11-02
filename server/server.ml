@@ -145,6 +145,8 @@ let run () =
       : (Socket.Address.Inet.t, int) Tcp.Server.t Deferred.t)
 
 (* Call [run], and then start the scheduler *)
-(* let () = run (); never_returns (Scheduler.go ()) *)
+let () =
+  run ();
+  never_returns (Scheduler.go ())
 
-let word = test_write ()
+(* let word = test_write () *)
