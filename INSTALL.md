@@ -1,7 +1,9 @@
-## MS1 Instructions:
+## MS2 Instructions:
 1) Clone the repository, and navigate to the root directory of the repository
-2) Make sure the packages Core and Async are installed. To do this run "opam install core" and "opam install async"
+2) Make sure the packages Core, Async, and Zarith are installed. To do this run "opam install core", "opam install async", and "opam install zarith".
 2) To run the server, run "dune build ./server/server.exe" and then run "dune exec ./server/server.exe"
-3) To run the client, run "dune build ./client/client.exe" and then run "dune exec ./client/client.exe \[ip\]" where \[ip\] is the IP address of the machine that the server is running on.
-  - To get the IP address of the server (for Mac), go to a new terminal tab on the machine running the server. Type "ifconfig" and hit enter. The "inet" address under the "en0" interface is the public IP address of the machine.
+3) For clients on other networks to be able to connect to your server, you must forward the port number from your router to your computer. First connect to the network on which you wish to run the server. This should be on a home router, or some other router whose settings you may access. Run the "ipconfig" (Windows) or "ifconfig" (Mac) command in terminal and put the default gateway IP address into the address bar of any search engine. The default gateway will be of the form X.X.X.X, and often is simply 192.168.1.1.
+You will be prompted for a username and password. The defaults are usually written on the router, but if not they are commonly both "admin". Once logged in, navigate to advanced settings and then to port forwarding. Add a new port forwarding rule with your local IP address as the internal host, which you can find as the IPv4 line from the "ipconfig" command, and for the port put the number 8886.
+If after forwarding the port you still cannot connect, it is possible that your firewall is blocking the connection.
+4) To run the client, run "dune build ./client/client.exe" and then run "dune exec ./client/client.exe \[ip\]" where \[ip\] is the IP address of the machine that the server is running on if you are on the same network. If you are connecting from a different network you will need the public IP address of the router the server is connected to, which you can find by looking up "what is my IP" from the server, or you can find it in the settings of the router.
 4) Any messages sent will be stored by the server and displayed to the next user that connects. When sending a message, format it as "\[your name\]: \[your message\]" so that when the messages are displayed it is clear who sent it.
