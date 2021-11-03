@@ -148,5 +148,4 @@ let run () =
 let () =
   run ();
   never_returns (Scheduler.go ())
-
 (* let word = test_write () *)
