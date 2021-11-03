@@ -12,6 +12,7 @@
    session id. We need a function to write a session ID value based on a
    username*)
 open Yojson.Basic.Util
+open Yojson.Basic
 
 let file = "db.json"
 
@@ -185,4 +186,96 @@ let delete_msg (uname : string) (msg : msg) = failwith "unimplemented"
 
 (* [list_unames] returns a list of all the usernames in the database
    file. *)
-let list_unames : string list = failwith "unimplemented"
+let list_unames () = failwith "unimplemented"
+
+(* [update_k key v json] returns the json object [json] updated by
+   setting key [key] to value [v]. Raises "Empty json" if the
+   corresponding json association list is empty.*)
+let update_k key (v : Yojson.Basic.t) (json : Yojson.Basic.t) =
+  let rec update_key = function
+    | [] -> failwith "Empty json"
+    | ((k, v') as m) :: tl ->
+        let _ = print_string ("\nk = " ^ k ^ "\n") in
+        if k = key then (k, v) :: tl else m :: update_key tl
+  in
+  match json with `Assoc obj -> `Assoc (update_key obj) | _ -> json
+
+(* [update_list key v check_k check_v json_lst delete_msgs] returns the
+   updated json users list. The function finds the user to update by
+   checking field [check_k] against value [check_v]. It then updates the
+   ([key],[v]) field for that user by calling [update_k]. If [key] =
+   "new messages" and [delete_msgs] = true, then all new messages
+   corresponding to the user corresponding to ([check_k],[check_v]) will
+   be deleted. Raises "unknown json type" if the json_lst field is not a
+   json String or json List*)
+let rec update_list key v check_k check_v json_lst delete_msgs =
+  match json_lst with
+  | h :: t ->
+      let cv = h |> member check_k in
+      if cv = check_v then
+        match h |> member key with
+        | `String v' ->
+            let _ = print_string "match found" in
+            update_k key v h :: t
+        | `List messages ->
+            print_string "\n deep deep list found \n";
+            if delete_msgs then update_k key (`List []) h :: t
+            else
+              let j = v :: messages in
+              update_k key (`List j) h :: t
+        | _ -> failwith "Unkown json type"
+      else h :: update_list key v check_k check_v t delete_msgs
+  | [] -> json_lst
+
+(* [update_json obj key v check_k check_v delete_msgs] returns the
+   updated json association list by calling [update_list key v check_k
+   check_v x delete_msgs]. Raises "invalid user list" if [obj] is not a
+   json association list. *)
+let update_json obj key v check_k check_v delete_msgs =
+  match obj with
+  | [] -> failwith "empty obj"
+  | (k, v') :: tl -> (
+      match v' with
+      | `List x ->
+          print_string "\ndeep list found\n";
+          let updated =
+            update_list key v check_k check_v x delete_msgs
+          in
+          ("users", `List updated) :: tl
+      | _ -> failwith "invalid user list")
+
+(* [update key v check_k check_v json delete_msgs] parses the
+   Yojson.Basic.t object [json] and returns the updated json object by
+   calling [update_json] if the json is an Association object. Returns
+   the original json object if it was not a valid association object. *)
+let update key v check_k check_v (json : Yojson.Basic.t) delete_msgs =
+  match json with
+  | `Assoc obj ->
+      print_string "assoc found";
+      `Assoc (update_json obj key v check_k check_v delete_msgs)
+  | _ -> json
+
+let test_write () =
+  print_string "testing";
+  print_newline ();
+  let j = from_file "../data/db.json" in
+  let new_j =
+    update "username" (`String "test6") "session id"
+      (`String "sdafj434jnl34g33il4h3") j false
+  in
+  to_file "../data/test.json" new_j;
+  let j = from_file "../data/db.json" in
+  let msg = from_string "{\"username\":\"bob\",\"message\":\"woah\"}" in
+  let new_j =
+    update "new messages" msg "session id"
+      (`String "sdafj434jnl34g33il4h3") j true
+  in
+  to_file "../data/test2.json" new_j;
+  let j = from_file "../data/test2.json" in
+  let msg = from_string "{\"username\":\"bob\",\"message\":\"woah\"}" in
+  let new_j =
+    update "new messages" msg "session id"
+      (`String "sdafj434jnl34g33il4h3") j false
+  in
+  to_file "../data/test3.json" new_j;
+  print_newline ()

@@ -1,6 +1,9 @@
 open Core
 open Async
 open Sys
+open Keys
+open Util.Msg
+open Data.Db
 
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)
@@ -20,7 +23,6 @@ let rec send_lst l w =
 (* [send_msgs w f] sends the messages in file f line by line using
    writer w. *)
 let send_msgs w f =
-  let _ = print_string "here" in
   let lst = try In_channel.read_lines f with _ -> [] in
   if List.is_empty lst then
     (* If the file does not exist, the following lines will create the
@@ -31,27 +33,70 @@ let send_msgs w f =
   send_lst lst w;
   send_str "\n" w
 
-(* [store_msg buffer r w f] uses reader [r] to read data from [buffer]
-   and appends it to file [f]. If file [f] does not exist, [f] will be
-   created and the data in [buffer] will be written to the empty
-   file. *)
-let rec store_msg buffer r w f =
-  let _ = print_string "Store msg running" in
-  Reader.read r buffer >>= function
-  | `Eof -> return ()
-  | `Ok bytes_read ->
-      let read = Bytes.sub buffer 0 bytes_read in
-      (* str now contains the data that was in the buffer, converted to
-         a string *)
-      let str = Bytes.to_string read in
-      let _ =
-        print_string
-          ("Msg Recieved: " ^ str ^ " with length "
-          ^ string_of_int (String.length str))
+(* [rand_challenge msg w] completes the random challenge in message
+   [msg] and writes the response using writer [w]. *)
+let rand_challenge msg w =
+  send_str
+    (msg_to_str { msg with r = msg.r + 1; op = "random_response" })
+    w
+
+(* [handle_msg msg w f] handles the string str sent from the client
+   based on its operation, using writer [w] and file [f] as arguments in
+   functions that it calls.*)
+let handle_msg msg w f =
+  match msg.op with
+  | "init" -> send_str (msg_to_str { msg with op = "ok" }) w
+  | "diffie_1" ->
+      let _ = print_string "diffie_1 beginning" in
+      let pub_info = extract_pub_info msg in
+      let dh_keys = pub_info |> create_dh_keys in
+      let new_keys =
+        create_dh_shared_key dh_keys msg.pub_key_client pub_info
       in
+      let shared_key = match new_keys.private_key with x, y -> y in
+      print_string ("\nshared key is " ^ Z.to_string shared_key);
+
+      send_str
+        (msg_to_str
+           {
+             msg with
+             op = "diffie_2";
+             pub_key_server = dh_keys |> dh_get_public_key;
+             mod_p = pub_info.mod_p;
+             prim_root_p = pub_info.prim_root_p;
+             pub_key_client = msg.pub_key_client;
+             dh_encrypted =
+               encrypt_dh
+                 (Z.to_string shared_key)
+                 "encryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption \
+                  testencryption testencryption testencryption test \
+                  blah"
+               |> dh_lst_to_str;
+           })
+        w
+  | "diffie_3" -> ()
+  | "random_challenge" -> rand_challenge msg w
+  | "login" ->
+      ()
+      (* TODO - one task I can do soon is set up the session ID
+         generator and send it back to the client*)
+  | "register" -> () (* TODO *)
+  | _ ->
+      let _ = print_string ("Msg Recieved: " ^ msg_to_str msg) in
       (* This is where it writes str to the file *)
       let oc = Out_channel.create ~append:true f in
-      Out_channel.output_string oc str;
+      Out_channel.output_string oc (msg_to_str msg);
       Out_channel.close oc;
       Out_channel.flush oc;
       (* TODO: add message here about the possibility of quitting once
@@ -59,20 +104,32 @@ let rec store_msg buffer r w f =
       send_str
         "Message Recieved! Type another message in the format \
          \"[name]: [msg]\" and hit enter to send: \n\n"
-        w;
-      store_msg buffer r w f
+        w
+
+(* [store_msg buffer r w f] uses reader [r] to read data from [buffer]
+   and appends it to file [f]. If file [f] does not exist, [f] will be
+   created and the data in [buffer] will be written to the empty
+   file. *)
+let rec recieve buffer r w f =
+  Reader.read r buffer >>= function
+  | `Eof -> return ()
+  | `Ok bytes_read ->
+      let read = Bytes.sub buffer 0 bytes_read in
+      (* str now contains the data that was in the buffer, converted to
+         a string *)
+      let str = Bytes.to_string read in
+      let _ = print_string str in
+      let msg = str_to_msg str in
+      handle_msg msg w f;
+      recieve buffer r w f
 
 (* [perform_tasks w r] performs all of the tasks that should be
    performed by the server after the server is started.*)
 let perform_tasks w r =
-  print_string "here";
-  send_msgs w msg_file;
-  send_str
-    "Type your message in the format \"[name]: [msg]\" and hit enter \
-     to send: \n\n"
-    w;
   let buffer = Bytes.create (16 * 1024) in
-  store_msg buffer r w msg_file
+  recieve buffer r w msg_file
+(* old code: send_msgs w msg_file; send_str "Type your message in the
+   format \"[name]: [msg]\" and hit enter \ to send: \n\n" w; *)
 
 (** Starts a TCP server, which listens on the specified port, calling
     all of the function in [perform_tasks] *)
@@ -91,3 +148,5 @@ let run () =
 let () =
   run ();
   never_returns (Scheduler.go ())
+
+(* let word = test_write () *)
