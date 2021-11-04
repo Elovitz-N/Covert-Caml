@@ -24,3 +24,5 @@
 
 val hours_worked : int
 (** [hours_worked] is the number of hours you worked on this assignment. *)
+(* Note: this is only the hours worked during this particular sprint *)
+
