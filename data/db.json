@@ -1,8 +1,22 @@
 {
   "users": [
     {
+      "session id": "sess",
+      "dh key": "dh",
+      "username": "dummyu",
+      "password": "dummyp",
+      "new messages": []
+    },
+    {
+      "session id": "sess",
+      "dh key": "dh",
+      "username": "dummyu",
+      "password": "dummyp",
+      "new messages": []
+    },
+    {
       "session id": "fhgjfsdaifhua2wn22nsdf",
-      "dh key": "dsafasdfadsffdasdfdafsfd",
+      "dh key": "test_key2",
       "username": "jstawinski",
       "password": "test",
       "new messages": [
@@ -18,7 +32,7 @@
     },
     {
       "session id": "sdafj434jnl34g33il4h3",
-      "dh key": "adsafasdfadsffdasdfdafsfd",
+      "dh key": "test_key1",
       "username": "Likita",
       "password": "test123",
       "new messages": [
