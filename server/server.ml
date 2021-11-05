@@ -1,9 +1,9 @@
 open Core
 open Async
 open Sys
-open Keys
 open Util.Msg
-open Data.Db
+open Util.Keys
+open Util.Db
 
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)

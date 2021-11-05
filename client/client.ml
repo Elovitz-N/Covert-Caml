@@ -1,8 +1,9 @@
 open Sys
 open Unix
 open Printf
-open Keys
 open Util.Msg
+open Util.Keys
+open Util.Db
 
 (* [uid] is the id that the client will use to identify itself to the
    server. This id will always be sent in plaintext.*)
