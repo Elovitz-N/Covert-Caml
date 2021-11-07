@@ -13,6 +13,9 @@ let send_str s w = Writer.write w s ~len:(String.length s)
 
 let msg_file = "../data/msgs.json"
 
+let rsa_keys =
+  ref { private_key = Z.zero; public_key = (Z.zero, Z.zero) }
+
 (* [send_lst l w] sends the list of string l using writer w. A new line
    character will be appended to each string in the list as it is sent.
    Requires: all elements in l are strings. *)
@@ -40,17 +43,22 @@ let send_msgs w f =
    [msg] and writes the response using writer [w]. *)
 let rand_challenge msg w =
   let decrypted_msg =
-    msg.dh_encrypted |> dh_str_to_lst
+    msg.dh_encrypted |> dh_str_to_lst |> decrypt_rsa !rsa_keys
+    |> dh_str_to_lst
     |> decrypt_dh (get_key msg.id !info_lst)
   in
-  let encrypted_msg =
+  let dh_encrypted_msg =
     decrypted_msg |> int_of_string |> ( + ) 1 |> Z.of_int |> Z.to_string
     |> encrypt_dh (get_key msg.id !info_lst)
     |> dh_lst_to_str
   in
   send_str
     (msg_to_str
-       { msg with dh_encrypted = encrypted_msg; op = "random_response" })
+       {
+         msg with
+         dh_encrypted = dh_encrypted_msg;
+         op = "random_response";
+       })
     w
 
 (* [handle_msg msg w f] handles the string str sent from the client
@@ -150,6 +158,7 @@ let perform_tasks w r =
     all of the function in [perform_tasks] *)
 let run () =
   print_string "Server Running";
+
   let host_and_port =
     Tcp.Server.create ~on_handler_error:`Raise
       (Tcp.Where_to_listen.of_port 8886) (fun _addr r w ->
@@ -159,8 +168,54 @@ let run () =
     (host_and_port
       : (Socket.Address.Inet.t, int) Tcp.Server.t Deferred.t)
 
+let gen_rsa_keys () =
+  let { private_key = p; public_key = k1, k2 } = create_rsa_keys () in
+  let pub = Z.to_string k1 ^ "\n" ^ Z.to_string k2 in
+  Out_channel.write_all "public_key.txt" ~data:pub;
+  let priv = Z.to_string p in
+  Out_channel.write_all "private_key.txt" ~data:priv;
+  Core.fprintf Stdlib.stdout "%s %!"
+    "\n\
+     RSA private key, public key created. Private key is stored in \
+     private_key.txt. Public key is stored in public_key.txt. In order \
+     for the server to be able to authenticate to the client, make \
+     sure that public_key.txt is stored inside of the \"/client/\" \
+     folder in the repository on every machine that wants to run the \
+     client application.\n\
+    \ "
+
+let load_rsa_keys () =
+  match Core.In_channel.read_lines "../server/public_key.txt" with
+  | [ x; y ] -> (
+      rsa_keys :=
+        { !rsa_keys with public_key = (Z.of_string x, Z.of_string y) };
+      match Core.In_channel.read_lines "../server/private_key.txt" with
+      | [ x ] ->
+          rsa_keys := { !rsa_keys with private_key = Z.of_string x }
+      | _ -> failwith "Invalid key found at /server/private_key.txt")
+  | _ -> failwith "Invalid key found at /server/private_key.txt"
+
 (* Call [run], and then start the scheduler *)
 let () =
-  run ();
-  never_returns (Scheduler.go ())
+  let args = Sys.get_argv () in
+  match Array.length args with
+  | 2 ->
+      if String.equal args.(1) "keygen" then
+        let _ =
+          Core.fprintf Stdlib.stdout "%s %!"
+            "\nGenerating RSA public key, private key... \n"
+        in
+        gen_rsa_keys ()
+  | _ ->
+      (match Core.In_channel.read_lines "private_key.txt" with
+      | [] ->
+          failwith
+            "No private key found. Try running dune exec ./server.exe \
+             keygen"
+      | key :: _ ->
+          load_rsa_keys ();
+          print_string "here");
+      let _ = run () in
+      never_returns (Scheduler.go ())
+
 (* let word = test_write () *)

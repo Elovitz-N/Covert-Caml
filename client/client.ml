@@ -20,6 +20,8 @@ let dh_keys = create_dh_keys dh_pub_info
 
 let shared_key = ref Z.zero
 
+let rsa_pub_key = ref ("", "")
+
 (* [send_str str socket] writes string [str] to socket [socket]. Note:
    all strings sent to the server must start with "op=[op] [id]". If the
    string contains a random challenge (which most do), then the string
@@ -177,6 +179,8 @@ let handle_msg msg s =
                encrypt_dh
                  (Z.to_string !shared_key)
                  (string_of_int !rand_challenge)
+               |> dh_lst_to_str
+               |> encrypt_rsa !rsa_pub_key
                |> dh_lst_to_str;
            })
         s;
@@ -225,13 +229,15 @@ let send s =
 let handshake s =
   send_str (msg_to_str { empty_msg with op = "init"; id = uid }) s
 
+let load_pub_key () =
+  match Core.In_channel.read_lines "public_key.txt" with
+  | [ x; y ] -> rsa_pub_key := (x, y)
+  | _ -> failwith "Invalid key found at /client/public_key.txt"
+
 let main () =
-  (* NOTE: the issue with these statements not printing was the buffer
-     was never being flushed. To fix, I can use [fprintf "%s%!" str]
-     where the %! arg ensures that the buffer will flush. For debugging
-     within the threads, I should create and clear a log file at the
-     beginning of main and then have the threads write the debug
-     statements to the log file. *)
+  fprintf Stdlib.stdout "%s %!" "Loading Server Public Key...\n";
+  load_pub_key ();
+
   fprintf Stdlib.stdout "%s %!" "Connecting to Server...\n";
   (* TODO: check more aggressively to make sure host is a valid IP
      addr *)

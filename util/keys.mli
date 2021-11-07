@@ -9,6 +9,12 @@ type pub_info = {
   mod_p : Z.t;
   prim_root_p : Z.t;
 }
+
+type rsa_keys = {
+  private_key : Z.t;
+  public_key : Z.t * Z.t;
+}
+
 (**[pub_info] is the type representing the public info used to generate
    keys in Diffie Hellman.*)
 
@@ -38,10 +44,6 @@ val decrypt_dh : string -> string list -> string
 (**[decrypt_dh k s] is the list of encrypted string blocks [s] decrypted
    using the diffie-hellman shared private key in [k]. Requires: [k] has
    had a shared key generated using [create_dh_shared_key].*)
-
-type rsa_keys
-(**[dh_keys] is the type representing an RSA private key, public key
-   pair.*)
 
 val rsa_get_public_key : rsa_keys -> string * string
 (**[rsa_get_public_key k] is the RSA public key pair of the public key,
