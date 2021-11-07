@@ -5,6 +5,9 @@ open Util.Msg
 open Util.Keys
 open Util.Db
 
+(* [info_lst] is an info list ref that stores the id, dh_key pairs *)
+let (info_lst : info list ref) = ref []
+
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)
 
@@ -36,8 +39,18 @@ let send_msgs w f =
 (* [rand_challenge msg w] completes the random challenge in message
    [msg] and writes the response using writer [w]. *)
 let rand_challenge msg w =
+  let decrypted_msg =
+    msg.dh_encrypted |> dh_str_to_lst
+    |> decrypt_dh (get_key msg.id !info_lst)
+  in
+  let encrypted_msg =
+    decrypted_msg |> int_of_string |> ( + ) 1 |> Z.of_int |> Z.to_string
+    |> encrypt_dh (get_key msg.id !info_lst)
+    |> dh_lst_to_str
+  in
   send_str
-    (msg_to_str { msg with r = msg.r + 1; op = "random_response" })
+    (msg_to_str
+       { msg with dh_encrypted = encrypted_msg; op = "random_response" })
     w
 
 (* [handle_msg msg w f] handles the string str sent from the client
@@ -54,8 +67,23 @@ let handle_msg msg w f =
         create_dh_shared_key dh_keys msg.pub_key_client pub_info
       in
       let shared_key = match new_keys.private_key with x, y -> y in
+      info_lst := { id = msg.id; dh_key = shared_key } :: !info_lst;
       print_string ("\nshared key is " ^ Z.to_string shared_key);
 
+      (* Protocol for storing dh keys: 1) server derives dh key, stores
+         <id, dh_key> 2) client logs in with id <uname, pass> 3) server
+         stores id and dh_key with that uname, pass so when the server
+         recieves a message, it firsts: checks the list to find the dh
+         key associated with that id. Then, it looks at the action
+         trying to be performed. If the action is login, it logs the
+         user in. If it is register, it registers the user. In both of
+         those cases it stores the id and dh_key with those users. If
+         the action is list users, it checks to make sure the user is
+         logged in by looking at the dh key used and seeing if that dh
+         key exists in the db. This works bc in order to decrypt the
+         message, the dh key must have been a valid key. If the op is
+         send a message, the server authenticates the same way, and then
+         sends the message. *)
       send_str
         (msg_to_str
            {
@@ -68,20 +96,7 @@ let handle_msg msg w f =
              dh_encrypted =
                encrypt_dh
                  (Z.to_string shared_key)
-                 "encryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption \
-                  testencryption testencryption testencryption test \
-                  blah"
+                 "encryption test is working"
                |> dh_lst_to_str;
            })
         w

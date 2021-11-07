@@ -1,20 +1,6 @@
 {
   "users": [
     {
-      "session id": "sess",
-      "dh key": "dh",
-      "username": "dummyu",
-      "password": "dummyp",
-      "new messages": []
-    },
-    {
-      "session id": "sess",
-      "dh key": "dh",
-      "username": "dummyu",
-      "password": "dummyp",
-      "new messages": []
-    },
-    {
       "session id": "fhgjfsdaifhua2wn22nsdf",
       "dh key": "test_key2",
       "username": "jstawinski",

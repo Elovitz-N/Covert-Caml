@@ -18,6 +18,8 @@ let dh_pub_info = dh_pub_info ()
 
 let dh_keys = create_dh_keys dh_pub_info
 
+let shared_key = ref Z.zero
+
 (* [send_str str socket] writes string [str] to socket [socket]. Note:
    all strings sent to the server must start with "op=[op] [id]". If the
    string contains a random challenge (which most do), then the string
@@ -121,7 +123,12 @@ let handle_success socket : string =
    [handle_success socket] if the challenge was completed. Raises
    "Random Challenge Failed" if the challenge was failed.*)
 let rand_response msg socket =
-  if msg.r = !rand_challenge + 1 then handle_success socket
+  let decrypted_msg =
+    msg.dh_encrypted |> dh_str_to_lst
+    |> decrypt_dh (Z.to_string !shared_key)
+    |> int_of_string
+  in
+  if decrypted_msg = !rand_challenge + 1 then handle_success socket
   else failwith "Random Challenge Failed"
 
 (* [handle_msg str s] handles the server response [msg] according to its
@@ -144,27 +151,19 @@ let handle_msg msg s =
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman initiating\n";
       ""
   | "diffie_2" ->
-      assert (msg.prim_root_p = dh_pub_info.prim_root_p);
-      assert (msg.mod_p = dh_pub_info.mod_p);
-      fprintf Stdlib.stdout
-        "\n\n\
-         client public key is %s, client key sent from server is %s \n\n\
-        \ %!" msg.pub_key_client
-        (dh_keys |> dh_get_public_key);
-
-      assert (msg.pub_key_client = (dh_keys |> dh_get_public_key));
       let new_keys =
         create_dh_shared_key dh_keys msg.pub_key_server
           (extract_pub_info msg)
       in
-      let shared_key = match new_keys.private_key with x, y -> y in
+      let shared_k = match new_keys.private_key with x, y -> y in
+      shared_key := shared_k;
       let _ =
         fprintf Stdlib.stdout "%s %!"
-          ("shared key is " ^ Z.to_string shared_key)
+          ("shared key is " ^ Z.to_string !shared_key)
       in
       let decrypted_msg =
         msg.dh_encrypted |> dh_str_to_lst
-        |> decrypt_dh (Z.to_string shared_key)
+        |> decrypt_dh (Z.to_string !shared_key)
       in
       fprintf Stdlib.stdout "%s %!"
         ("\n\ndecrypted message is: " ^ decrypted_msg ^ "\n\n");
@@ -174,7 +173,11 @@ let handle_msg msg s =
              msg with
              op = "random_challenge";
              id = uid;
-             r = !rand_challenge;
+             dh_encrypted =
+               encrypt_dh
+                 (Z.to_string !shared_key)
+                 (string_of_int !rand_challenge)
+               |> dh_lst_to_str;
            })
         s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";

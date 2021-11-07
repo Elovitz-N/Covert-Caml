@@ -1,5 +1,19 @@
 open Keys
 
+type info = {
+  id : string;
+  dh_key : Z.t;
+}
+
+type enc_msg = {
+  op : string;
+  r : int;
+  uname : string;
+  password : string;
+  reciever : string;
+  message : string;
+}
+
 type msg = {
   op : string;
   id : string;
@@ -90,3 +104,7 @@ let dh_str_to_lst str = Str.split (Str.regexp "[BREAK_HERE]+") str
 
 let dh_lst_to_str lst =
   List.fold_left (fun x y -> x ^ "BREAK_HERE" ^ y) "" lst
+
+let get_key id (lst : info list) =
+  let res = List.filter (fun (x : info) -> x.id = id) lst |> List.hd in
+  Z.to_string res.dh_key
