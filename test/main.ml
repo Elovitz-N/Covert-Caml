@@ -1,7 +1,8 @@
 open OUnit2
 open Yojson.Basic.Util
-open Keys
 open Util.Msg
+open Util.Db
+open Util.Keys
 
 let test (name : string) input expected_output : test =
   name >:: fun _ -> assert_equal expected_output input
