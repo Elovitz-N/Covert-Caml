@@ -1,6 +1,140 @@
 (**[pow a b] is [a] to the power of [b]. Requires: [b >= 0].*)
 let rec pow a b = match b with 0 -> 1 | n -> a * pow a (b - 1)
 
+module type GaloisField = sig
+  type t
+  (**[t] is the type of an element of a Galois field.*)
+
+  val add : t -> t -> t
+  (**[add a b] is the sum of [a] and [b] in the field.*)
+
+  val p : t
+  (**[p] is the irreducible polynomial in the field used for
+     multiplication. It should not be used as an element of the field
+     for computation.*)
+
+  val mul : t -> t -> t
+  (**[mul a b] is [a] multiplied by [b] in the field using [p] as the
+     mod.*)
+
+  val of_char : char -> t
+  (**[of_char c] is the unique element of GF(2^8) associated with any
+     character [c].*)
+
+  val to_char : t -> char
+  (**[to_char t] is the unique ascii character associated with the
+     element of GF(2^8) [t]*)
+
+  val s_box : t -> t
+  (**[s_box t] is an element of the field GF(2^8) permuted by the
+     conversion s_box table.*)
+
+  val inv_s_box : t -> t
+  (**[inv_s_box t] is the inverse permutation of [s_box t].*)
+end
+
+module GF256 : GaloisField = struct
+  type t = int
+  (**AF: an element of the Galois field GF(2^8) is represented by the
+     decimal int of the binary number created from its coefficients.
+     Example: [x^6+x^3+x+1] is [01001011] as the binary representation
+     of its coefficients which is [75] in decimal. RI: it is a positive
+     int and except for [p], it is between 0 and 255.*)
+
+  let add a b = Int.logxor a b
+
+  let p = 283
+
+  (**[max_pow x] is the highest number n such that 2^n is less than [x].*)
+  let rec max_pow x = if x <= 1 then 0 else 1 + max_pow (x / 2)
+
+  let mul a b =
+    let rec mul_aux a b =
+      if a = 0 then 0
+      else
+        let x = pow 2 (max_pow b) in
+        Int.logxor (x * a) (mul_aux x (b - x))
+    in
+    let a_x_b = mul_aux a b in
+    let rec mod_p x =
+      if x < 256 then x
+      else mod_p (Int.logxor (Int.shift_left p (max_pow x - 8)) x)
+    in
+    mod_p a_x_b
+
+  let of_char c = Char.code c
+
+  let to_char t = Char.chr t
+
+  let s_box = failwith "Unimplemented: s_box"
+
+  let inv_s_box = failwith "Unimplemented: inv_s_box"
+end
+
+module type ByteMatrix = sig
+  type t
+  (**[t] is the type representing a 4x4 square matrix of bytes.*)
+
+  val of_string : string -> t
+  (**[of_string s] is a matrix of bytes made from the 16 character
+     string [s].*)
+
+  val to_string : t -> string
+  (**[to_string t] is the byte matrix [t] flattened into a 16 character
+     string column by column.*)
+
+  val mul : t -> t -> t
+  (**[mul a b] is the matrix multiplication of [a] and [b] in the Galois
+     field GF(2^8).*)
+
+  val s_box : t -> t
+
+  val inv_s_box : t -> t
+
+  val shift_rows : t -> t
+
+  val inv_shift_rows : t -> t
+
+  val mix_column : t -> t
+
+  val inv_mix_column : t -> t
+end
+
+(**[split_string n s] is a list consisting of [s] split into
+   [n]-character strings. If it doesn't split evenly then the last
+   string is filled with the null character ['\000']. Example:
+   [split_string 8 "01234567890123456789"] is
+   [\["01234567";"89012345";"6789\000\000\000\000"\]] *)
+let rec split_string n s =
+  if s = "" then []
+  else
+    let block_length = min (String.length s) n in
+    (String.sub s 0 block_length ^ String.make (n - block_length) '\000')
+    :: split_string n
+         (String.sub s block_length
+            (max (String.length s - block_length) 0))
+
+module ByteMatrixImp = struct
+  type t = GF256.t array array
+
+  let of_string s =
+    let a = Array.make_matrix 4 4 "\000" in
+    Array.mapi
+      (fun i x ->
+        Array.mapi
+          (fun j y ->
+            let index = (4 * i) + j in
+            s.[index] |> GF256.of_char)
+          x)
+      a
+
+  let to_string t =
+    Array.fold_left
+      (fun acc1 x ->
+        acc1 ^ Array.fold_left (fun acc2 y -> acc2 ^ y) "" x)
+      "" t
+end
+
 (**[rand_prime n] is a random prime of at least n bits.*)
 let rand_prime n =
   (*[rand n] is a random positive integer of size n bits.*)
@@ -96,20 +230,6 @@ let create_dh_shared_key keys their_key pub_key =
   in
   { keys with private_key = (fst keys.private_key, shared_key) }
 
-(**[split_string s n] is a list consisting of [s] split into
-   [n]-character strings except for the last element which may be fewer
-   characters. Example: [split_string "01234567890123456789" 16] is
-   [\["0123456789012345";"6789"\]] *)
-let rec split_string s n =
-  if s = "" then []
-  else
-    let block_length = min (String.length s) n in
-    String.sub s 0 block_length
-    :: split_string
-         (String.sub s block_length
-            (max (String.length s - block_length) 0))
-         n
-
 (**[trim_string s] is [s] with all characters [\000] removed from the
    end.*)
 let rec trim_string s =
@@ -119,7 +239,7 @@ let rec trim_string s =
 
 let encrypt_dh k s =
   let shared_key = Z.of_string k in
-  let plain_txt = split_string s (Z.numbits shared_key / 8) in
+  let plain_txt = split_string (Z.numbits shared_key / 8) s in
   List.map
     (fun x -> Z.(to_string (of_bits x lxor shared_key)))
     plain_txt
@@ -155,7 +275,7 @@ let create_rsa_keys () =
 let encrypt_rsa k s =
   let exp = Z.of_string (fst k) in
   let modulo = Z.of_string (snd k) in
-  let plain_txt = split_string s (Z.numbits modulo / 8) in
+  let plain_txt = split_string (Z.numbits modulo / 8) s in
   List.map
     (fun x -> Z.(to_string (powm (of_bits x) exp modulo)))
     plain_txt
