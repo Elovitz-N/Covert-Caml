@@ -7,9 +7,6 @@ open Util.Keys
 let test (name : string) input expected_output : test =
   name >:: fun _ -> assert_equal expected_output input
 
-(**[test_many t n] is a list of [n] copies of the test [t].*)
-let rec test_many t n = if n = 0 then [] else t :: test_many t (n - 1)
-
 let test_s_box =
   let rec test_s_box_aux n =
     if n = -1 then []
@@ -25,29 +22,63 @@ let test_s_box =
   in
   test_s_box_aux 255
 
-(**[rand_string n] is a random string of fewer than [n] characters made
-   up of printable characters. The optional arguments can make it
-   generate with nonprintable characters and make the length fixed at
-   [n].*)
-let rand_string ?printable:(p = true) ?rand_length:(r = true) n =
-  let length = if p then Random.int n else n in
-  String.init length (fun _ ->
-      (if r then Random.int 95 + 32 else Random.int 255) |> Char.chr)
+let q_test (name : string) (count : int) f arbitrary =
+  QCheck_runner.to_ounit2_test
+    (QCheck.Test.make ~name ~count arbitrary (fun s -> s = f s))
 
-let keys_tests =
-  test_many
-    (let p = dh_pub_info () in
-     let k1 = create_dh_keys p in
-     let k2 = create_dh_keys p in
-     let pub1 = dh_get_public_key k1 in
-     let pub2 = dh_get_public_key k2 in
-     let k1 = create_dh_shared_key k1 pub2 p in
-     let k2 = create_dh_shared_key k2 pub1 p in
-     test "DH Shared key is the same"
-       (Z.to_string (snd k1.private_key))
-       (Z.to_string (snd k2.private_key)))
-    100
-  @ test_many
+let keys_tests' =
+  [
+    QCheck_runner.to_ounit2_test
+      (QCheck.Test.make ~name:"DH Shared key is the same" ~count:10
+         QCheck.unit (fun _ ->
+           let p = dh_pub_info () in
+           let k1 = create_dh_keys p in
+           let k2 = create_dh_keys p in
+           let pub1 = dh_get_public_key k1 in
+           let pub2 = dh_get_public_key k2 in
+           let k1 = create_dh_shared_key k1 pub2 p in
+           let k2 = create_dh_shared_key k2 pub1 p in
+           Z.to_string (snd k1.private_key)
+           = Z.to_string (snd k2.private_key)));
+    QCheck_runner.to_ounit2_test
+      (QCheck.Test.make
+         ~name:
+           "ByteMatrix of_string then to_string keeps string the same."
+         ~count:100
+         QCheck.(string_of_size Gen.(16 -- 16))
+         (fun s -> ByteMatrix.(s |> of_string |> to_string) = s));
+    QCheck_runner.to_ounit2_test
+      (QCheck.Test.make
+         ~name:"ByteMatrix s_box then inv_s_box keeps string the same."
+         ~count:100
+         QCheck.(string_of_size Gen.(16 -- 16))
+         (fun s ->
+           ByteMatrix.(
+             s |> of_string |> s_box |> inv_s_box |> to_string)
+           = s));
+    QCheck_runner.to_ounit2_test
+      (QCheck.Test.make
+         ~name:
+           "ByteMatrix shift_rows then inv_shift_rows keeps string the \
+            same."
+         ~count:100
+         QCheck.(string_of_size Gen.(16 -- 16))
+         (fun s ->
+           ByteMatrix.(
+             s |> of_string |> shift_rows |> inv_shift_rows |> to_string)
+           = s));
+    QCheck_runner.to_ounit2_test
+      (QCheck.Test.make
+         ~name:
+           "ByteMatrix mix_colum then inv_mix_column keeps string the \
+            same."
+         ~count:100
+         QCheck.(string_of_size Gen.(16 -- 16))
+         (fun s ->
+           ByteMatrix.(
+             s |> of_string |> mix_column |> inv_mix_column |> to_string)
+           = s));
+    QCheck_runner.to_ounit2_test
       (let p = dh_pub_info () in
        let k1 = create_dh_keys p in
        let k2 = create_dh_keys p in
@@ -55,14 +86,17 @@ let keys_tests =
        let pub2 = dh_get_public_key k2 in
        let k1 = create_dh_shared_key k1 pub2 p in
        let k2 = create_dh_shared_key k2 pub1 p in
-       let s = rand_string 10000 in
-       test "DH encrypt then decrypt keeps a string the same"
-         (s
-         |> encrypt_dh (Z.to_string (snd k1.private_key))
-         |> decrypt_dh (Z.to_string (snd k2.private_key)))
-         s)
-      100
-  @ test_many
+
+       QCheck.Test.make
+         ~name:"DH encrypt then decrypt keeps a string the same"
+         ~count:10
+         QCheck.(printable_string_of_size (Gen.int_bound 10000))
+         (fun s ->
+           s
+           |> encrypt_dh (Z.to_string (snd k1.private_key))
+           |> decrypt_dh (Z.to_string (snd k2.private_key))
+           = s));
+    QCheck_runner.to_ounit2_test
       (let p = dh_pub_info () in
        let k1 = create_dh_keys p in
        let k2 = create_dh_keys p in
@@ -70,57 +104,32 @@ let keys_tests =
        let pub2 = dh_get_public_key k2 in
        let k1 = create_dh_shared_key k1 pub2 p in
        let k2 = create_dh_shared_key k2 pub1 p in
-       let s = rand_string 10000 in
-       test
-         "DH encrypt then decrypt using str breaking and concatenating \
-          fctns keeps a string the same"
-         (s
-         |> encrypt_dh (Z.to_string (snd k1.private_key))
-         |> dh_lst_to_str |> dh_str_to_lst
-         |> decrypt_dh (Z.to_string (snd k2.private_key)))
-         s)
-      100
-  @ test_many
-      (let k = create_rsa_keys () in
-       let pub = rsa_get_public_key k in
-       let s = rand_string 10000 in
-       test "RSA encrypt then decrypt keeps a string the same"
-         (s |> encrypt_rsa pub |> decrypt_rsa k)
-         s)
-      100
+
+       QCheck.Test.make
+         ~name:
+           "DH encrypt then decrypt using str breaking and \
+            concatenating fctns keeps a string the same"
+         ~count:0
+         QCheck.(printable_string_of_size (Gen.int_bound 10000))
+         (fun s ->
+           s
+           |> encrypt_dh (Z.to_string (snd k1.private_key))
+           |> dh_lst_to_str |> dh_str_to_lst
+           |> decrypt_dh (Z.to_string (snd k2.private_key))
+           = s));
+    QCheck_runner.to_ounit2_test
+      (QCheck.Test.make
+         ~name:"RSA encrypt then decrypt keeps a string the same"
+         ~count:10
+         QCheck.(printable_string_of_size (Gen.int_bound 10000))
+         (fun s ->
+           let k = create_rsa_keys () in
+           let pub = rsa_get_public_key k in
+           s |> encrypt_rsa pub |> decrypt_rsa k = s));
+  ]
   @ test_s_box
-  @ test_many
-      (let s = rand_string ~printable:false ~rand_length:false 16 in
-       test "ByteMatrix of_string then to_string keeps string the same."
-         ByteMatrix.(s |> of_string |> to_string)
-         s)
-      100
-  @ test_many
-      (let s = rand_string ~printable:false ~rand_length:false 16 in
-       test "ByteMatrix s_box then inv_s_box keeps string the same."
-         ByteMatrix.(s |> of_string |> s_box |> inv_s_box |> to_string)
-         s)
-      100
-  @ test_many
-      (let s = rand_string ~printable:false ~rand_length:false 16 in
-       test
-         "ByteMatrix shift_rows then inv_shift_rows keeps string the \
-          same."
-         ByteMatrix.(
-           s |> of_string |> shift_rows |> inv_shift_rows |> to_string)
-         s)
-      100
-  @ test_many
-      (let s = rand_string ~printable:false ~rand_length:false 16 in
-       test
-         "ByteMatrix mix_colum then inv_mix_column keeps string the\n\
-         \  same."
-         ByteMatrix.(
-           s |> of_string |> mix_column |> inv_mix_column |> to_string)
-         s)
-      100
 
-let suite = "Testing" >::: List.flatten [ keys_tests ]
+let suite = "Testing" >::: List.flatten [ keys_tests' ]
 
 let _ = run_test_tt_main suite
 
