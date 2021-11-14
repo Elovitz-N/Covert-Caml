@@ -260,12 +260,20 @@ let create_key_sched k =
   in
   key_sched_aux small_k 0
 
-(**[rand_prime n] is a random prime of usually greater than [n] bytes.*)
+(**[rand_prime n] is a random prime of at least n bits.*)
 let rand_prime n =
-  let gen = PRNG.Chacha.State.make_self_init () in
-  let b = Bytes.create (n + 1) in
-  PRNG.Chacha.State.bytes gen b 0 (n + 1);
-  Z.(b |> Bytes.to_string |> of_bits |> nextprime)
+  (*[rand n] is a random positive integer of size n bits.*)
+  let rand n =
+    Random.self_init ();
+    let rec big_string_int m =
+      if m <= 0 then ""
+      else
+        string_of_int (Random.int (pow 2 (min m 30) - 1))
+        ^ big_string_int (m - 30)
+    in
+    Z.of_string (big_string_int n)
+  in
+  Z.nextprime (rand n)
 
 type dh_keys = {
   private_key : Z.t * Z.t;
@@ -308,7 +316,7 @@ let prime_factors n =
   List.sort_uniq Z.compare (aux Z.(of_int 2) n)
 
 let dh_pub_info () =
-  let q = rand_prime 128 in
+  let q = rand_prime 1024 in
   let mod_p = gen_p q in
   (*[gen_prim_root] generates a primitive root in modulo [p].*)
   let rec gen_prim_root q p acc =
@@ -325,7 +333,7 @@ let dh_pub_info () =
   { mod_p = fst mod_p; prim_root_p }
 
 let create_dh_keys pub_info =
-  let my_key = rand_prime 16 in
+  let my_key = rand_prime 128 in
   {
     private_key = (my_key, Z.zero);
     public_key = Z.powm pub_info.prim_root_p my_key pub_info.mod_p;
@@ -402,8 +410,8 @@ let rsa_get_public_key k =
   (Z.to_string (fst k.public_key), Z.to_string (snd k.public_key))
 
 let create_rsa_keys () =
-  let p = rand_prime 192 in
-  let q = rand_prime 192 in
+  let p = rand_prime 1536 in
+  let q = rand_prime 1536 in
   let n = Z.mul p q in
   let phi_n = Z.((p - one) * (q - one)) in
   let rec gen_e acc =
