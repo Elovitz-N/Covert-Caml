@@ -21,7 +21,7 @@ module GaloisField = struct
       if b = 0 then 0
       else
         let x = pow 2 (max_pow b) in
-        Int.logxor (x * a) (mul_aux x (b - x))
+        Int.logxor (x * a) (mul_aux a (b - x))
     in
     let a_x_b = mul_aux a b in
     let rec mod_p x =
@@ -145,10 +145,10 @@ module ByteMatrix = struct
         |> add (mul v.(2) a.(2).(i))
         |> add (mul v.(3) a.(3).(i)))
     in
-    let a = Array.make_matrix 4 4 0 in
+    let new_matrix = Array.make_matrix 4 4 0 in
     Array.mapi
       (fun i x -> Array.mapi (fun j y -> mul_aux a b.(i) j) x)
-      a
+      new_matrix
 
   (**[shift_row t m n] shifts row [m] of matrix [t] [n] steps to the
      left. Requires: m is from 0 to 3.*)
