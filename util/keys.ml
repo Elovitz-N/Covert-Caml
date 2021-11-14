@@ -18,7 +18,7 @@ module GaloisField = struct
 
   let mul a b =
     let rec mul_aux a b =
-      if a = 0 then 0
+      if b = 0 then 0
       else
         let x = pow 2 (max_pow b) in
         Int.logxor (x * a) (mul_aux x (b - x))
@@ -35,134 +35,85 @@ module GaloisField = struct
   let to_char t = Char.chr t
 
   let s_box_tble =
-    [|
-    [|
+    [| [|
     99; 202; 183; 4; 9; 83; 208; 81; 205; 96; 224; 231; 186; 112; 225; 140;
-    |];
-    [|
+    |]; [|
     124; 130; 253; 199; 131; 209; 239; 163; 12; 129; 50; 200; 120; 62; 248; 161;
-    |];
-    [|
+    |]; [|
     119; 201; 147; 35; 44; 0; 170; 64; 19; 79; 58; 55; 37; 181; 152; 137;
-    |];
-    [|
+    |]; [|
     123; 125; 38; 195; 26; 237; 251; 143; 236; 220; 10; 109; 46; 102; 17; 13;
-    |];
-    [|
+    |]; [|
     242; 250; 54; 24; 27; 32; 67; 146; 95; 34; 73; 141; 28; 72; 105; 191
-    |];
-    [|
+    |]; [|
     107; 89; 63; 150; 110; 252; 77; 157; 151; 42; 6; 213; 166; 3; 217; 230
-    |];
-    [|
+    |]; [|
     111; 71; 247; 5; 90; 177; 51; 56; 68; 144; 36; 78; 180; 246; 142; 66
-    |];
-    [|
+    |]; [|
     197; 240; 204; 154; 160; 91; 133; 245; 23; 136; 92; 169; 198; 14; 148; 104
-    |];
-    [|
+    |]; [|
     48; 173; 52; 7; 82; 106; 69; 188; 196; 70; 194; 108; 232; 97; 155; 65
-    |];
-    [|
+    |]; [|
     1; 212; 165; 18; 59; 203; 249; 182; 167; 238; 211; 86; 221; 53; 30; 153
-    |];
-    [|
+    |]; [|
     103; 162; 229; 128; 214; 190; 2; 218; 126; 184; 172; 244; 116; 87; 135; 45 
-    |];
-    [|
+    |]; [|
     43; 175; 241; 226; 179; 57; 127; 33; 61; 20; 98; 234; 31; 185; 233; 15
-    |];
-    [|
+    |]; [|
     254; 156; 113; 235; 41; 74; 80; 16; 100; 222; 145; 101; 75; 134; 206; 176
-    |];
-    [|
+    |]; [|
     215; 164; 216; 39; 227; 76; 60; 255; 93; 94; 149; 122; 189; 193; 85; 84
-    |];
-    [|
+    |]; [|
     171; 114; 49; 178; 47; 88; 159; 243; 25; 11; 228; 174; 139; 29; 40; 187
-    |];
-    [|
+    |]; [|
     118; 192; 21; 117; 132; 207; 168; 210; 115; 219; 121; 8; 138; 158; 223; 22
-    |]
-    |]
-    [@@ocamlformat "disable"]
+    |] |] [@@ocamlformat "disable"]
 
   let s_box t = s_box_tble.(t mod 16).(t / 16)
 
   let inv_s_box_tble = 
-    [|
-    [|
+    [| [|
     82; 124; 84; 8; 114; 108; 144; 208; 58; 150; 71; 252; 31; 96; 160; 23
-    |];
-    [|
+    |]; [|
     9; 227; 123; 46; 248; 112; 216; 44; 145; 172; 241; 86; 221; 81; 224; 43
-    |];
-    [|
+    |]; [|
     106; 57; 148; 161; 246; 72; 171; 30; 17; 116; 26; 62; 168; 127; 59; 4
-    |];
-    [|
+    |]; [|
     213; 130; 50; 102; 100; 80; 0; 143; 65; 34; 113; 75; 51; 169; 77; 126
-    |];
-    [|
+    |]; [|
     48; 155; 166; 40; 134; 253; 140; 202; 79; 231; 29; 198; 136; 25; 174; 186
-    |];
-    [|
+    |]; [|
     54; 47; 194; 217; 104; 237; 188; 63; 103; 173; 41; 210; 7; 181; 42; 119
-    |];
-    [|
+    |]; [|
     165; 255; 35; 36; 152; 185; 211; 15; 220; 53; 197; 121; 199; 74; 245; 214
-    |];
-    [|
-    56; 135; 61; 178; 22; 218; 10; 2; 234; 133; 127; 32; 49; 13; 176; 38
-    |];
-    [|
+    |]; [|
+    56; 135; 61; 178; 22; 218; 10; 2; 234; 133; 137; 32; 49; 13; 176; 38
+    |]; [|
     191; 52; 238; 118; 212; 94; 247; 193; 151; 226; 111; 154; 177; 45; 200; 225
-    |];
-    [|
+    |]; [|
     64; 142; 76; 91; 164; 21; 228; 175; 242; 249; 183; 219; 18; 229; 235; 105
-    |];
-    [|
+    |]; [|
     163; 67; 149; 162; 92; 70; 88; 189; 207; 55; 98; 192; 16; 122; 187; 20
-    |];
-    [|
+    |]; [|
     158; 68; 11; 73; 204; 87; 5; 3; 206; 232; 14; 254; 89; 159; 60; 99
-    |];
-    [|
+    |]; [|
     129; 196; 66; 109; 93; 167; 184; 1; 240; 28; 170; 120; 39; 147; 131; 85
-    |];
-    [|
+    |]; [|
     243; 222; 250; 139; 101; 141; 179; 19; 180; 117; 24; 205; 128; 201; 83; 33
-    |];
-    [|
+    |]; [|
     215; 233; 195; 209; 182; 157; 69; 138; 230; 223; 190; 90; 236; 156; 153; 12
-    |];
-    [|
-    251; 203; 78; 37; 146; 132; 6; 107; 115; 110; 20; 244; 95; 239; 97; 125
-    |]
-    |][@@ocamlformat "disable"]
+    |]; [|
+    251; 203; 78; 37; 146; 132; 6; 107; 115; 110; 27; 244; 95; 239; 97; 125
+    |] |] [@@ocamlformat "disable"]
 
   let inv_s_box t = inv_s_box_tble.(t mod 16).(t / 16)
 end
-
-(**[split_string n s] is a list consisting of [s] split into
-   [n]-character strings. If it doesn't split evenly then the last
-   string is filled with the null character ['\000']. Example:
-   [split_string 8 "01234567890123456789"] is
-   [\["01234567";"89012345";"6789\000\000\000\000"\]] *)
-let rec split_string n s =
-  if s = "" then []
-  else
-    let block_length = min (String.length s) n in
-    (String.sub s 0 block_length ^ String.make (n - block_length) '\000')
-    :: split_string n
-         (String.sub s block_length
-            (max (String.length s - block_length) 0))
 
 module ByteMatrix = struct
   type t = GaloisField.t array array
 
   let of_string s =
-    let a = Array.make_matrix 4 4 "\000" in
+    let a = Array.make_matrix 4 4 0 in
     Array.mapi
       (fun i x ->
         Array.mapi
@@ -181,7 +132,84 @@ module ByteMatrix = struct
               acc2 ^ (y |> GaloisField.to_char |> String.make 1))
             "" x)
       "" t
+
+  let s_box = Array.map (Array.map GaloisField.s_box)
+
+  let inv_s_box = Array.map (Array.map GaloisField.inv_s_box)
+
+  let mul a b =
+    let mul_aux a v i =
+      GaloisField.(
+        mul v.(0) a.(0).(i)
+        |> add (mul v.(1) a.(1).(i))
+        |> add (mul v.(2) a.(2).(i))
+        |> add (mul v.(3) a.(3).(i)))
+    in
+    let a = Array.make_matrix 4 4 0 in
+    Array.mapi
+      (fun i x -> Array.mapi (fun j y -> mul_aux a b.(i) j) x)
+      a
+
+  (**[shift_row t m n] shifts row [m] of matrix [t] [n] steps to the
+     left. Requires: m is from 0 to 3.*)
+  let shift_row t m n =
+    let shift_row_left t i =
+      let placeholder = t.(0).(i) in
+      t.(0).(i) <- t.(1).(i);
+      t.(1).(i) <- t.(2).(i);
+      t.(2).(i) <- t.(3).(i);
+      t.(3).(i) <- placeholder
+    in
+    for i = 1 to n do
+      shift_row_left t m
+    done
+
+  let shift_rows t =
+    shift_row t 1 1;
+    shift_row t 2 2;
+    shift_row t 3 3;
+    t
+
+  let inv_shift_rows t =
+    shift_row t 1 3;
+    shift_row t 2 2;
+    shift_row t 3 1;
+    t
+
+  let mix_column t =
+    mul
+      [|
+        [| 2; 1; 1; 3 |];
+        [| 3; 2; 1; 1 |];
+        [| 1; 3; 2; 1 |];
+        [| 1; 1; 3; 2 |];
+      |]
+      t
+
+  let inv_mix_column t =
+    mul
+      [|
+        [| 14; 9; 13; 11 |];
+        [| 11; 14; 9; 13 |];
+        [| 13; 11; 14; 9 |];
+        [| 9; 13; 11; 14 |];
+      |]
+      t
 end
+
+(**[split_string n s] is a list consisting of [s] split into
+   [n]-character strings. If it doesn't split evenly then the last
+   string is filled with the null character ['\000']. Example:
+   [split_string 8 "01234567890123456789"] is
+   [\["01234567";"89012345";"6789\000\000\000\000"\]] *)
+let rec split_string n s =
+  if s = "" then []
+  else
+    let block_length = min (String.length s) n in
+    (String.sub s 0 block_length ^ String.make (n - block_length) '\000')
+    :: split_string n
+         (String.sub s block_length
+            (max (String.length s - block_length) 0))
 
 (**[rand_prime n] is a random prime of at least n bits.*)
 let rand_prime n =

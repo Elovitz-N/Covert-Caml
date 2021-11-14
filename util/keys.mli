@@ -1,4 +1,4 @@
-module type GaloisField = sig
+module GaloisField : sig
   type t
   (**[t] is the type of an element of a Galois field.*)
 
@@ -30,7 +30,7 @@ module type GaloisField = sig
   (**[inv_s_box t] is the inverse permutation of [s_box t].*)
 end
 
-module type ByteMatrix = sig
+module ByteMatrix : sig
   type t
   (**[t] is the type representing a 4x4 square matrix of bytes.*)
 
@@ -43,8 +43,8 @@ module type ByteMatrix = sig
      string column by column.*)
 
   val mul : t -> t -> t
-  (**[mul a b] is the matrix multiplication of [a] and [b] in the Galois
-     field GF(2^8).*)
+  (**[mul a b] is the matrix multiplication [ab] in the Galois field
+     GF(2^8).*)
 
   val s_box : t -> t
   (**[s_box t] is the matrix [t] with each entry permuted by the AES
