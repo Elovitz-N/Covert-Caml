@@ -211,6 +211,14 @@ let rec split_string n s =
          (String.sub s block_length
             (max (String.length s - block_length) 0))
 
+(**[sum a b] is the bitwise sum of two strings. Requires: [a] and [b]
+   have equal length*)
+let sum a b =
+  String.mapi
+    (fun i c ->
+      GaloisField.(add (of_char c) (of_char b.[i]) |> to_char))
+    a
+
 (**[nonlin_fun i s] is the nonlinear function as specified in AES for
    generating key number [i + 1] in the key schedule. Requires: [s] is
    of length 4.*)
@@ -232,13 +240,6 @@ let nonlin_fun i s =
 (**[next_key i k] is the [i + 1] key in the AES key schedule generated
    from the [i] key [k]. Requires: [k] is of length 16.*)
 let next_key i k =
-  (*[sum a b] is the bitwise sum of two strings of equal length.*)
-  let sum a b =
-    String.mapi
-      (fun i c ->
-        GaloisField.(add (of_char c) (of_char b.[i]) |> to_char))
-      a
-  in
   let words = Array.of_list (split_string 4 k) in
   let w0 = sum words.(0) (nonlin_fun i words.(3)) in
   let w1 = sum w0 words.(1) in
@@ -248,26 +249,23 @@ let next_key i k =
 
 (**[key_sched k] is a list of keys in the AES key schedule generated
    from starting key [k]. Requires: k is of length 16.*)
-let key_sched k =
+let create_key_sched k =
+  let small_k =
+    String.sub
+      Digestif.SHA256.(k |> digest_string |> to_raw_string)
+      0 16
+  in
   let rec key_sched_aux k i =
     if i = 10 then [] else k :: key_sched_aux (next_key i k) (i + 1)
   in
-  key_sched_aux k 0
+  key_sched_aux small_k 0
 
-(**[rand_prime n] is a random prime of at least n bits.*)
+(**[rand_prime n] is a random prime of usually greater than [n] bytes.*)
 let rand_prime n =
-  (*[rand n] is a random positive integer of size n bits.*)
-  let rand n =
-    Random.self_init ();
-    let rec big_string_int m =
-      if m <= 0 then ""
-      else
-        string_of_int (Random.int (pow 2 (min m 30) - 1))
-        ^ big_string_int (m - 30)
-    in
-    Z.of_string (big_string_int n)
-  in
-  Z.nextprime (rand n)
+  let gen = PRNG.Chacha.State.make_self_init () in
+  let b = Bytes.create (n + 1) in
+  PRNG.Chacha.State.bytes gen b 0 (n + 1);
+  Z.(b |> Bytes.to_string |> of_bits |> nextprime)
 
 type dh_keys = {
   private_key : Z.t * Z.t;
@@ -310,7 +308,7 @@ let prime_factors n =
   List.sort_uniq Z.compare (aux Z.(of_int 2) n)
 
 let dh_pub_info () =
-  let q = rand_prime 1024 in
+  let q = rand_prime 128 in
   let mod_p = gen_p q in
   (*[gen_prim_root] generates a primitive root in modulo [p].*)
   let rec gen_prim_root q p acc =
@@ -327,25 +325,16 @@ let dh_pub_info () =
   { mod_p = fst mod_p; prim_root_p }
 
 let create_dh_keys pub_info =
-  let my_key = rand_prime 128 in
+  let my_key = rand_prime 16 in
   {
     private_key = (my_key, Z.zero);
     public_key = Z.powm pub_info.prim_root_p my_key pub_info.mod_p;
   }
 
 let create_dh_shared_key keys their_key pub_key =
-  print_string "\n Creating DH shared key \n";
-  print_newline ();
-
   let their_key = Z.of_string their_key in
-  let _ =
-    print_string ("\n their key is " ^ Z.to_string their_key ^ "\n")
-  in
   let shared_key =
     Z.powm their_key (fst keys.private_key) pub_key.mod_p
-  in
-  let _ =
-    print_string ("\n shared key is " ^ Z.to_string shared_key ^ "\n\n")
   in
   { keys with private_key = (fst keys.private_key, shared_key) }
 
@@ -357,18 +346,52 @@ let rec trim_string s =
   else s
 
 let encrypt_dh k s =
-  let shared_key = Z.of_string k in
-  let plain_txt = split_string (Z.numbits shared_key / 8) s in
-  List.map
-    (fun x -> Z.(to_string (of_bits x lxor shared_key)))
-    plain_txt
+  let plain_txt = split_string 16 s in
+  let key_sched = create_key_sched k in
+  let rec encrypt_str str = function
+    | [] | [ _ ] -> failwith "Impossible"
+    | [ k1; k2 ] ->
+        ByteMatrix.(
+          sum str k1 |> of_string |> s_box |> shift_rows |> to_string
+          |> sum k2)
+        (*The last round doesn't mix columns.*)
+    | k1 :: k2 :: t ->
+        encrypt_str
+          ByteMatrix.(
+            sum str k1 |> of_string |> s_box |> shift_rows |> mix_column
+            |> to_string)
+          (k2 :: t)
+  in
+  List.map (fun x -> encrypt_str x key_sched) plain_txt
 
 let decrypt_dh k s =
-  let shared_key = Z.of_string k in
-  let plain_txt =
-    List.map (fun x -> Z.(to_bits (of_string x lxor shared_key))) s
+  let cypher_txt = List.(map (split_string 16) s |> flatten) in
+  let key_sched = create_key_sched k |> List.rev in
+  let decrypt_str ks str =
+    match ks with
+    | [] -> failwith "Impossible"
+    | k :: ks ->
+        let str' =
+          ByteMatrix.(
+            sum str k |> of_string |> inv_shift_rows |> inv_s_box
+            |> to_string)
+          (*The first round doesn't unmix columns*)
+        in
+        let rec decrypt_str_aux str = function
+          | [] -> failwith "Impossible"
+          | [ k ] -> sum str k
+          | h :: t ->
+              decrypt_str_aux
+                ByteMatrix.(
+                  sum str h |> of_string |> inv_mix_column
+                  |> inv_shift_rows |> inv_s_box |> to_string)
+                t
+        in
+        decrypt_str_aux str' ks
   in
-  List.fold_left (fun x y -> x ^ trim_string y) "" plain_txt
+  List.fold_left
+    (fun acc x -> acc ^ (x |> decrypt_str key_sched |> trim_string))
+    "" cypher_txt
 
 type rsa_keys = {
   private_key : Z.t;
@@ -379,8 +402,8 @@ let rsa_get_public_key k =
   (Z.to_string (fst k.public_key), Z.to_string (snd k.public_key))
 
 let create_rsa_keys () =
-  let p = rand_prime 1536 in
-  let q = rand_prime 1536 in
+  let p = rand_prime 192 in
+  let q = rand_prime 192 in
   let n = Z.mul p q in
   let phi_n = Z.((p - one) * (q - one)) in
   let rec gen_e acc =
