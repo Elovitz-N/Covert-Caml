@@ -1,39 +1,7 @@
 (**[pow a b] is [a] to the power of [b]. Requires: [b >= 0].*)
 let rec pow a b = match b with 0 -> 1 | n -> a * pow a (b - 1)
 
-module type GaloisField = sig
-  type t
-  (**[t] is the type of an element of a Galois field.*)
-
-  val add : t -> t -> t
-  (**[add a b] is the sum of [a] and [b] in the field.*)
-
-  val p : t
-  (**[p] is the irreducible polynomial in the field used for
-     multiplication. It should not be used as an element of the field
-     for computation.*)
-
-  val mul : t -> t -> t
-  (**[mul a b] is [a] multiplied by [b] in the field using [p] as the
-     mod.*)
-
-  val of_char : char -> t
-  (**[of_char c] is the unique element of GF(2^8) associated with any
-     character [c].*)
-
-  val to_char : t -> char
-  (**[to_char t] is the unique ascii character associated with the
-     element of GF(2^8) [t]*)
-
-  val s_box : t -> t
-  (**[s_box t] is an element of the field GF(2^8) permuted by the
-     conversion s_box table.*)
-
-  val inv_s_box : t -> t
-  (**[inv_s_box t] is the inverse permutation of [s_box t].*)
-end
-
-module GF256 : GaloisField = struct
+module GaloisField = struct
   type t = int
   (**AF: an element of the Galois field GF(2^8) is represented by the
      decimal int of the binary number created from its coefficients.
@@ -66,38 +34,114 @@ module GF256 : GaloisField = struct
 
   let to_char t = Char.chr t
 
-  let s_box = failwith "Unimplemented: s_box"
+  let s_box_tble =
+    [|
+    [|
+    99; 202; 183; 4; 9; 83; 208; 81; 205; 96; 224; 231; 186; 112; 225; 140;
+    |];
+    [|
+    124; 130; 253; 199; 131; 209; 239; 163; 12; 129; 50; 200; 120; 62; 248; 161;
+    |];
+    [|
+    119; 201; 147; 35; 44; 0; 170; 64; 19; 79; 58; 55; 37; 181; 152; 137;
+    |];
+    [|
+    123; 125; 38; 195; 26; 237; 251; 143; 236; 220; 10; 109; 46; 102; 17; 13;
+    |];
+    [|
+    242; 250; 54; 24; 27; 32; 67; 146; 95; 34; 73; 141; 28; 72; 105; 191
+    |];
+    [|
+    107; 89; 63; 150; 110; 252; 77; 157; 151; 42; 6; 213; 166; 3; 217; 230
+    |];
+    [|
+    111; 71; 247; 5; 90; 177; 51; 56; 68; 144; 36; 78; 180; 246; 142; 66
+    |];
+    [|
+    197; 240; 204; 154; 160; 91; 133; 245; 23; 136; 92; 169; 198; 14; 148; 104
+    |];
+    [|
+    48; 173; 52; 7; 82; 106; 69; 188; 196; 70; 194; 108; 232; 97; 155; 65
+    |];
+    [|
+    1; 212; 165; 18; 59; 203; 249; 182; 167; 238; 211; 86; 221; 53; 30; 153
+    |];
+    [|
+    103; 162; 229; 128; 214; 190; 2; 218; 126; 184; 172; 244; 116; 87; 135; 45 
+    |];
+    [|
+    43; 175; 241; 226; 179; 57; 127; 33; 61; 20; 98; 234; 31; 185; 233; 15
+    |];
+    [|
+    254; 156; 113; 235; 41; 74; 80; 16; 100; 222; 145; 101; 75; 134; 206; 176
+    |];
+    [|
+    215; 164; 216; 39; 227; 76; 60; 255; 93; 94; 149; 122; 189; 193; 85; 84
+    |];
+    [|
+    171; 114; 49; 178; 47; 88; 159; 243; 25; 11; 228; 174; 139; 29; 40; 187
+    |];
+    [|
+    118; 192; 21; 117; 132; 207; 168; 210; 115; 219; 121; 8; 138; 158; 223; 22
+    |]
+    |]
+    [@@ocamlformat "disable"]
 
-  let inv_s_box = failwith "Unimplemented: inv_s_box"
-end
+  let s_box t = s_box_tble.(t mod 16).(t / 16)
 
-module type ByteMatrix = sig
-  type t
-  (**[t] is the type representing a 4x4 square matrix of bytes.*)
+  let inv_s_box_tble = 
+    [|
+    [|
+    82; 124; 84; 8; 114; 108; 144; 208; 58; 150; 71; 252; 31; 96; 160; 23
+    |];
+    [|
+    9; 227; 123; 46; 248; 112; 216; 44; 145; 172; 241; 86; 221; 81; 224; 43
+    |];
+    [|
+    106; 57; 148; 161; 246; 72; 171; 30; 17; 116; 26; 62; 168; 127; 59; 4
+    |];
+    [|
+    213; 130; 50; 102; 100; 80; 0; 143; 65; 34; 113; 75; 51; 169; 77; 126
+    |];
+    [|
+    48; 155; 166; 40; 134; 253; 140; 202; 79; 231; 29; 198; 136; 25; 174; 186
+    |];
+    [|
+    54; 47; 194; 217; 104; 237; 188; 63; 103; 173; 41; 210; 7; 181; 42; 119
+    |];
+    [|
+    165; 255; 35; 36; 152; 185; 211; 15; 220; 53; 197; 121; 199; 74; 245; 214
+    |];
+    [|
+    56; 135; 61; 178; 22; 218; 10; 2; 234; 133; 127; 32; 49; 13; 176; 38
+    |];
+    [|
+    191; 52; 238; 118; 212; 94; 247; 193; 151; 226; 111; 154; 177; 45; 200; 225
+    |];
+    [|
+    64; 142; 76; 91; 164; 21; 228; 175; 242; 249; 183; 219; 18; 229; 235; 105
+    |];
+    [|
+    163; 67; 149; 162; 92; 70; 88; 189; 207; 55; 98; 192; 16; 122; 187; 20
+    |];
+    [|
+    158; 68; 11; 73; 204; 87; 5; 3; 206; 232; 14; 254; 89; 159; 60; 99
+    |];
+    [|
+    129; 196; 66; 109; 93; 167; 184; 1; 240; 28; 170; 120; 39; 147; 131; 85
+    |];
+    [|
+    243; 222; 250; 139; 101; 141; 179; 19; 180; 117; 24; 205; 128; 201; 83; 33
+    |];
+    [|
+    215; 233; 195; 209; 182; 157; 69; 138; 230; 223; 190; 90; 236; 156; 153; 12
+    |];
+    [|
+    251; 203; 78; 37; 146; 132; 6; 107; 115; 110; 20; 244; 95; 239; 97; 125
+    |]
+    |][@@ocamlformat "disable"]
 
-  val of_string : string -> t
-  (**[of_string s] is a matrix of bytes made from the 16 character
-     string [s].*)
-
-  val to_string : t -> string
-  (**[to_string t] is the byte matrix [t] flattened into a 16 character
-     string column by column.*)
-
-  val mul : t -> t -> t
-  (**[mul a b] is the matrix multiplication of [a] and [b] in the Galois
-     field GF(2^8).*)
-
-  val s_box : t -> t
-
-  val inv_s_box : t -> t
-
-  val shift_rows : t -> t
-
-  val inv_shift_rows : t -> t
-
-  val mix_column : t -> t
-
-  val inv_mix_column : t -> t
+  let inv_s_box t = inv_s_box_tble.(t mod 16).(t / 16)
 end
 
 (**[split_string n s] is a list consisting of [s] split into
@@ -114,8 +158,8 @@ let rec split_string n s =
          (String.sub s block_length
             (max (String.length s - block_length) 0))
 
-module ByteMatrixImp = struct
-  type t = GF256.t array array
+module ByteMatrix = struct
+  type t = GaloisField.t array array
 
   let of_string s =
     let a = Array.make_matrix 4 4 "\000" in
@@ -124,14 +168,18 @@ module ByteMatrixImp = struct
         Array.mapi
           (fun j y ->
             let index = (4 * i) + j in
-            s.[index] |> GF256.of_char)
+            s.[index] |> GaloisField.of_char)
           x)
       a
 
   let to_string t =
     Array.fold_left
       (fun acc1 x ->
-        acc1 ^ Array.fold_left (fun acc2 y -> acc2 ^ y) "" x)
+        acc1
+        ^ Array.fold_left
+            (fun acc2 y ->
+              acc2 ^ (y |> GaloisField.to_char |> String.make 1))
+            "" x)
       "" t
 end
 
