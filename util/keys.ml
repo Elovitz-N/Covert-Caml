@@ -211,6 +211,49 @@ let rec split_string n s =
          (String.sub s block_length
             (max (String.length s - block_length) 0))
 
+(**[nonlin_fun i s] is the nonlinear function as specified in AES for
+   generating key number [i + 1] in the key schedule. Requires: [s] is
+   of length 4.*)
+let nonlin_fun i s =
+  let shifted = String.sub s 0 1 ^ String.sub s 1 3 in
+  let s_boxed =
+    String.map
+      (fun c -> GaloisField.(c |> of_char |> s_box |> to_char))
+      shifted
+  in
+  let round_coefed =
+    String.make 1
+      GaloisField.(
+        s_boxed.[0] |> of_char |> add (mul (pow 2 i) 1) |> to_char)
+    ^ String.sub s 1 3
+  in
+  round_coefed
+
+(**[next_key i k] is the [i + 1] key in the AES key schedule generated
+   from the [i] key [k]. Requires: [k] is of length 16.*)
+let next_key i k =
+  (*[sum a b] is the bitwise sum of two strings of equal length.*)
+  let sum a b =
+    String.mapi
+      (fun i c ->
+        GaloisField.(add (of_char c) (of_char b.[i]) |> to_char))
+      a
+  in
+  let words = Array.of_list (split_string 4 k) in
+  let w0 = sum words.(0) (nonlin_fun i words.(3)) in
+  let w1 = sum w0 words.(1) in
+  let w2 = sum w1 words.(2) in
+  let w3 = sum w2 words.(3) in
+  w0 ^ w1 ^ w2 ^ w3
+
+(**[key_sched k] is a list of keys in the AES key schedule generated
+   from starting key [k]. Requires: k is of length 16.*)
+let key_sched k =
+  let rec key_sched_aux k i =
+    if i = 10 then [] else k :: key_sched_aux (next_key i k) (i + 1)
+  in
+  key_sched_aux k 0
+
 (**[rand_prime n] is a random prime of at least n bits.*)
 let rand_prime n =
   (*[rand n] is a random positive integer of size n bits.*)

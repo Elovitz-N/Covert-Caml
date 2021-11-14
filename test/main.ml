@@ -25,8 +25,10 @@ let test_s_box =
   in
   test_s_box_aux 255
 
-(**[rand_string ()] is a random string of fewer than 10000 characters
-   made up of characters with ASCII 1 to 127.*)
+(**[rand_string n] is a random string of fewer than [n] characters made
+   up of printable characters. The optional arguments can make it
+   generate with nonprintable characters and make the length fixed at
+   [n].*)
 let rand_string ?printable:(p = true) ?rand_length:(r = true) n =
   let length = if p then Random.int n else n in
   String.init length (fun _ ->
