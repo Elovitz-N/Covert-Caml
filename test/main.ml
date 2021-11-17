@@ -97,27 +97,6 @@ let keys_tests' =
            |> decrypt_dh (Z.to_string (snd k2.private_key))
            = s));
     QCheck_runner.to_ounit2_test
-      (let p = dh_pub_info () in
-       let k1 = create_dh_keys p in
-       let k2 = create_dh_keys p in
-       let pub1 = dh_get_public_key k1 in
-       let pub2 = dh_get_public_key k2 in
-       let k1 = create_dh_shared_key k1 pub2 p in
-       let k2 = create_dh_shared_key k2 pub1 p in
-
-       QCheck.Test.make
-         ~name:
-           "DH encrypt then decrypt using str breaking and \
-            concatenating fctns keeps a string the same"
-         ~count:0
-         QCheck.(printable_string_of_size (Gen.int_bound 10000))
-         (fun s ->
-           s
-           |> encrypt_dh (Z.to_string (snd k1.private_key))
-           |> dh_lst_to_str |> dh_str_to_lst
-           |> decrypt_dh (Z.to_string (snd k2.private_key))
-           = s));
-    QCheck_runner.to_ounit2_test
       (QCheck.Test.make
          ~name:"RSA encrypt then decrypt keeps a string the same"
          ~count:10

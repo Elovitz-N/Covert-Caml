@@ -370,13 +370,14 @@ let encrypt_dh k s =
             |> to_string)
           (k2 :: t)
   in
-  List.map (fun x -> encrypt_str x key_sched) plain_txt
+  List.fold_left
+    (fun acc x -> acc ^ encrypt_str x key_sched)
+    "" plain_txt
 
 let decrypt_dh k s =
-  let cypher_txt = List.(map (split_string 16) s |> flatten) in
+  let cypher_txt = split_string 16 s in
   let key_sched = create_key_sched k |> List.rev in
-  let decrypt_str ks str =
-    match ks with
+  let decrypt_str str = function
     | [] -> failwith "Impossible"
     | k :: ks ->
         let str' =
@@ -398,7 +399,7 @@ let decrypt_dh k s =
         decrypt_str_aux str' ks
   in
   List.fold_left
-    (fun acc x -> acc ^ (x |> decrypt_str key_sched |> trim_string))
+    (fun acc x -> acc ^ (decrypt_str x key_sched |> trim_string))
     "" cypher_txt
 
 type rsa_keys = {

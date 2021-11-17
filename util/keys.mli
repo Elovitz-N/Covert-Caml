@@ -102,15 +102,13 @@ val create_dh_shared_key : dh_keys -> string -> pub_info -> dh_keys
    generated using [s] as the partner's public key and p as the public
    info.*)
 
-val encrypt_dh : string -> string -> string list
-(**[encrypt_dh k s] is the string [s] encrypted in blocks using the
-   diffie-hellman shared private key in [k]. Requires: [k] has had a
-   shared key generated using [create_dh_shared_key].*)
+val encrypt_dh : string -> string -> string
+(**[encrypt_dh k s] is the string [s] encrypted using AES in blocks in
+   ECB mode with the diffie-hellman shared private key [k].*)
 
-val decrypt_dh : string -> string list -> string
-(**[decrypt_dh k s] is the list of encrypted string blocks [s] decrypted
-   using the diffie-hellman shared private key in [k]. Requires: [k] has
-   had a shared key generated using [create_dh_shared_key].*)
+val decrypt_dh : string -> string -> string
+(**[decrypt_dh k s] is the string [s] decrypted using AES in blocks in
+   ECB mode with the diffie-hellman shared private key [k].*)
 
 type rsa_keys
 (**[dh_keys] is the type representing an RSA private key, public key
