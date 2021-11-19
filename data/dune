@@ -1,4 +1,0 @@
-(library
- (name data)
- (public_name Data)
- (libraries core async yojson))

@@ -14,6 +14,9 @@ _build/
 # server msg history
 data/msgs.json
 server/msgs.json
+data/test.json
+data/*.json
+data/db.json
 
 # ocamlbuild targets
 *.byte
