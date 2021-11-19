@@ -11,7 +11,7 @@ let uid = id_gen 2 ""
 (* [rand_challenge] is the integer that the client will send to the
    server during the server authentication process. This is used to
    defend against replay attacks.*)
-let rand_challenge = rand_int
+let rand_challenge = ref rand_int
 
 let dh_pub_info = dh_pub_info ()
 
@@ -120,7 +120,7 @@ let handle_success socket : string =
    [handle_success socket] if the challenge was completed. Raises
    "Random Challenge Failed" if the challenge was failed.*)
 let rand_response msg socket =
-  if msg.r = rand_challenge + 1 then handle_success socket
+  if msg.r = !rand_challenge + 1 then handle_success socket
   else failwith "Random Challenge Failed"
 
 (* [handle_msg str s] handles the server response [msg] according to its
@@ -169,14 +169,12 @@ let handle_msg msg s =
         ("\n\ndecrypted message is: " ^ decrypted_msg ^ "\n\n");
       send_str
         (msg_to_str
-           { msg with op = "random_challenge"; id = uid; r = rand_int })
-        s;
-      fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";
-      ""
-  | "diffie_complete" ->
-      send_str
-        (msg_to_str
-           { msg with op = "random_challenge"; id = uid; r = rand_int })
+           {
+             msg with
+             op = "random_challenge";
+             id = uid;
+             r = !rand_challenge;
+           })
         s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";
       ""

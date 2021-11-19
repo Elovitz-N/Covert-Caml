@@ -13,7 +13,7 @@
    username*)
 open Yojson.Basic.Util
 
-let file = "db.json"
+let file = ref "db.json"
 
 type username = string
 
@@ -66,21 +66,23 @@ let users_of_json json =
       json |> member "new messages" |> to_list |> List.map msgs_of_json;
   }
 
-let get_users json =
+let get_users (db : string) =
+  let json = Yojson.Basic.from_file db in
   json |> member "users" |> to_list |> List.map users_of_json
 
-let from_json json = { users = get_users json }
+let from_json db = { users = get_users db }
 
-let rec get_username_helper id user_list =
-  match user_list with
+let rec get_username_helper id lst =
+  match lst with
   | [] -> raise (DNE id)
   | h :: t ->
       if h.session_id = id then h.username else get_username_helper id t
 
 (* [get_uname id] returns the username associated with the session id
    [id]. Raises "DNE" if that session id does not exist. *)
-let get_uname (id : session_id) (chat : t) : string =
-  get_username_helper id chat.users
+let get_uname (id : session_id) (db : string) : string =
+  let user_list = get_users db in
+  get_username_helper id user_list
 
 let rec get_password_helper id user_list =
   match user_list with
@@ -90,8 +92,9 @@ let rec get_password_helper id user_list =
 
 (* [get_password id] returns the password associated with the session id
    [id]. Raises "DNE" if that session id does not exist.*)
-let get_password (id : session_id) (chat : t) =
-  get_password_helper id chat.users
+let get_password (id : session_id) (db : string) =
+  let user_list = get_users db in
+  get_password_helper id user_list
 
 let rec get_new_msgs_helper id user_list =
   match user_list with
@@ -102,8 +105,9 @@ let rec get_new_msgs_helper id user_list =
 (* [get_new_msgs id] returns a list of the new messages associated with
    the session id [id]. Raises "DNE" if that session id does not
    exist.*)
-let get_new_msgs (id : session_id) (chat : t) =
-  get_new_msgs_helper id chat.users
+let get_new_msgs (id : session_id) (db : string) =
+  let user_list = get_users db in
+  get_new_msgs_helper id user_list
 
 let rec get_dh_key_helper id user_list =
   match user_list with
@@ -113,8 +117,9 @@ let rec get_dh_key_helper id user_list =
 
 (* [get_dh_key id] returns the dh key associated with session id
    [id]. *)
-let get_dh_key (id : session_id) (chat : t) =
-  get_dh_key_helper id chat.users
+let get_dh_key (id : session_id) (db : string) =
+  let user_list = get_users db in
+  get_dh_key_helper id user_list
 
 (* [put_dh_key id key] stores the dh key associated with session id [id]
    in the json file. *)
