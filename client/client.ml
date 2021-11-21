@@ -126,7 +126,7 @@ let handle_success socket : string =
    "Random Challenge Failed" if the challenge was failed.*)
 let rand_response msg socket =
   let decrypted_msg =
-    msg.dh_encrypted |> dh_str_to_lst
+    msg.dh_encrypted
     |> decrypt_dh (Z.to_string !shared_key)
     |> int_of_string
   in
@@ -164,8 +164,7 @@ let handle_msg msg s =
           ("shared key is " ^ Z.to_string !shared_key)
       in
       let decrypted_msg =
-        msg.dh_encrypted |> dh_str_to_lst
-        |> decrypt_dh (Z.to_string !shared_key)
+        msg.dh_encrypted |> decrypt_dh (Z.to_string !shared_key)
       in
       fprintf Stdlib.stdout "%s %!"
         ("\n\ndecrypted message is: " ^ decrypted_msg ^ "\n\n");
@@ -179,7 +178,6 @@ let handle_msg msg s =
                encrypt_dh
                  (Z.to_string !shared_key)
                  (string_of_int !rand_challenge)
-               |> dh_lst_to_str
                |> encrypt_rsa !rsa_pub_key
                |> dh_lst_to_str;
            })

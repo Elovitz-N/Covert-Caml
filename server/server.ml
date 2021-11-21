@@ -44,13 +44,11 @@ let send_msgs w f =
 let rand_challenge msg w =
   let decrypted_msg =
     msg.dh_encrypted |> dh_str_to_lst |> decrypt_rsa !rsa_keys
-    |> dh_str_to_lst
     |> decrypt_dh (get_key msg.id !info_lst)
   in
   let dh_encrypted_msg =
     decrypted_msg |> int_of_string |> ( + ) 1 |> Z.of_int |> Z.to_string
     |> encrypt_dh (get_key msg.id !info_lst)
-    |> dh_lst_to_str
   in
   send_str
     (msg_to_str
@@ -60,6 +58,33 @@ let rand_challenge msg w =
          op = "random_response";
        })
     w
+
+(* [create_enc_msg parent_msg enc_msg] encryptes [enc_msg] and returns a
+   string message with the encrypted message stored in
+   [parent_msg].dh_encrypted*)
+let create_enc_msg parent_msg enc_msg =
+  let enc =
+    enc_msg |> msg_to_str
+    |> encrypt_dh (get_key parent_msg.id !info_lst)
+  in
+  msg_to_str { parent_msg with dh_encrypted = enc }
+
+(* [handle__enc_msg msg w] handles the message msg sent from the client
+   in the encrypted portion of the message based on its operation, using
+   writer [w] as arguments in functions that it calls.*)
+let handle_enc_msg msg w =
+  match msg.op with
+  | "register" ->
+      if check_user "db.ml" msg.uname then
+        send_str
+          (create_enc_msg msg { empty_msg with op = "reg_failure" })
+          w
+      else add_user msg.id msg.uname msg.password;
+      send_str
+        (create_enc_msg msg { empty_msg with op = "reg_success" })
+        w
+  | "login" -> ()
+  | _ -> ()
 
 (* [handle_msg msg w f] handles the string str sent from the client
    based on its operation, using writer [w] and file [f] as arguments in
@@ -104,8 +129,7 @@ let handle_msg msg w f =
              dh_encrypted =
                encrypt_dh
                  (Z.to_string shared_key)
-                 "encryption test is working"
-               |> dh_lst_to_str;
+                 "encryption test is working";
            })
         w
   | "diffie_3" -> ()
@@ -115,6 +139,12 @@ let handle_msg msg w f =
       (* TODO - one task I can do soon is set up the session ID
          generator and send it back to the client*)
   | "register" -> () (* TODO *)
+  | "post_auth" ->
+      msg.dh_encrypted
+      |> decrypt_dh (get_key msg.id !info_lst)
+      |> str_to_msg |> handle_enc_msg w
+      (* post auth it will decrypt diffie, which will be a msg str, and
+         then call handle_enc_msg to parse the msg*)
   | _ ->
       let _ = print_string ("Msg Recieved: " ^ msg_to_str msg) in
       (* This is where it writes str to the file *)
