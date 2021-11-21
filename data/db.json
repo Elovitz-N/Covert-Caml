@@ -1,6 +1,30 @@
 {
   "users": [
     {
+      "session id": "621527756105965222",
+      "username": "ff",
+      "password": "fff",
+      "new messages": []
+    },
+    {
+      "session id": "847008477494100168",
+      "username": "ff",
+      "password": "ffff",
+      "new messages": []
+    },
+    {
+      "session id": "571390941381100656",
+      "username": "adsf",
+      "password": "adsf",
+      "new messages": []
+    },
+    {
+      "session id": "",
+      "username": "hm",
+      "password": "hmmm",
+      "new messages": []
+    },
+    {
       "session id": "fhgjfsdaifhua2wn22nsdf",
       "dh key": "test_key2",
       "username": "jstawinski",

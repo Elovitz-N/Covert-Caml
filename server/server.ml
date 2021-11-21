@@ -11,6 +11,8 @@ let (info_lst : info list ref) = ref []
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)
 
+let db_file = "../data/db.json"
+
 let msg_file = "../data/msgs.json"
 
 let rsa_keys =
@@ -72,17 +74,26 @@ let create_enc_msg parent_msg enc_msg =
 (* [handle__enc_msg msg w] handles the message msg sent from the client
    in the encrypted portion of the message based on its operation, using
    writer [w] as arguments in functions that it calls.*)
-let handle_enc_msg msg w =
+let handle_enc_msg w parent_msg msg =
   match msg.op with
   | "register" ->
-      if check_user "db.ml" msg.uname then
+      let _ = print_string "registering" in
+
+      if check_user db_file msg.uname then
+        (* TODO: As of now, this username check is not working*)
         send_str
-          (create_enc_msg msg { empty_msg with op = "reg_failure" })
+          (create_enc_msg
+             { parent_msg with op = "post_auth" }
+             { parent_msg with op = "reg_failure" })
           w
-      else add_user msg.id msg.uname msg.password;
-      send_str
-        (create_enc_msg msg { empty_msg with op = "reg_success" })
-        w
+      else
+        let _ = print_string "adding" in
+        let _ = add_user parent_msg.id msg.uname msg.password in
+        send_str
+          (create_enc_msg
+             { parent_msg with op = "post_auth" }
+             { parent_msg with op = "reg_success" })
+          w
   | "login" -> ()
   | _ -> ()
 
@@ -142,7 +153,7 @@ let handle_msg msg w f =
   | "post_auth" ->
       msg.dh_encrypted
       |> decrypt_dh (get_key msg.id !info_lst)
-      |> str_to_msg |> handle_enc_msg w
+      |> str_to_msg |> handle_enc_msg w msg
       (* post auth it will decrypt diffie, which will be a msg str, and
          then call handle_enc_msg to parse the msg*)
   | _ ->

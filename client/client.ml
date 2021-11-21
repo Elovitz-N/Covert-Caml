@@ -18,7 +18,7 @@ let dh_pub_info = dh_pub_info ()
 
 let dh_keys = create_dh_keys dh_pub_info
 
-let shared_key = ref Z.zero
+let shared_key = ref ""
 
 let rsa_pub_key = ref ("", "")
 
@@ -65,10 +65,17 @@ let prompt_uname_pass () =
    with | None -> failwith "Aborting due to timeout." | Some passwd -> [
    uname; passwd ]) *)
 
+(* [create_enc_msg parent_msg enc_msg] encryptes [enc_msg] and returns a
+   string message with the encrypted message stored in
+   [parent_msg].dh_encrypted*)
+let create_enc_msg parent_msg enc_msg =
+  let enc = enc_msg |> msg_to_str |> encrypt_dh !shared_key in
+  msg_to_str { parent_msg with dh_encrypted = enc }
+
 (* [handle_login socket] prompts the user for their username and
    password during login and then sends the login request to the server
    using socket [socket].*)
-let handle_login socket =
+let handle_login msg socket =
   fprintf Stdlib.stdout "%s %!"
     "\nPlease enter your username, then hit enter.\n\n";
   match prompt_uname_pass () with
@@ -81,28 +88,26 @@ let handle_login socket =
       ()
   | _ -> failwith "Login Unsuccessful"
 
-(* [handle_register socket] prompts the user for their username and
+(* [handle_register msg socket] prompts the user for their username and
    password during registration and then sends the registration request
    to the server using socket [socket].*)
-let handle_register socket =
+let handle_register msg socket =
   fprintf Stdlib.stdout "%s %!"
     "\nPlease enter your new username, then hit enter.\n\n";
   match prompt_uname_pass () with
-  | uname :: passwd :: e ->
+  | uname :: password :: e ->
       fprintf Stdlib.stdout "%s %!" "\nRegistering...\n";
       send_str
-        ("op=register id=" ^ uid ^ " " ^ "username=" ^ uname ^ " "
-       ^ "password=" ^ passwd)
-        socket;
-      fprintf Stdlib.stdout "%s %!"
-        "\nRegistration Succesful! You can now login.\n";
-      handle_login socket
+        (create_enc_msg
+           { msg with op = "post_auth" }
+           { empty_msg with op = "register"; uname; password })
+        socket
   | _ -> failwith "Registration Unsuccessful"
 
 (* [handle_success socket] prompts the user to either login or register
    after the server authentication process has completed, and calls
    [handle_login socket] or [handle_register socket].*)
-let handle_success socket : string =
+let handle_success msg socket : string =
   fprintf Stdlib.stdout "%s %!" "Random Challenge Succesfull\n";
   fprintf Stdlib.stdout "%s %!"
     "\n\
@@ -111,10 +116,10 @@ let handle_success socket : string =
   let cmd = read_line () in
   match cmd with
   | "login" ->
-      handle_login socket;
+      handle_login msg socket;
       ""
   | "register" ->
-      handle_register socket;
+      handle_register msg socket;
       ""
   | _ ->
       fprintf Stdlib.stdout "%s %!" "Invalid value. Please try again.\n";
@@ -126,12 +131,22 @@ let handle_success socket : string =
    "Random Challenge Failed" if the challenge was failed.*)
 let rand_response msg socket =
   let decrypted_msg =
-    msg.dh_encrypted
-    |> decrypt_dh (Z.to_string !shared_key)
-    |> int_of_string
+    msg.dh_encrypted |> decrypt_dh !shared_key |> int_of_string
   in
-  if decrypted_msg = !rand_challenge + 1 then handle_success socket
+  if decrypted_msg = !rand_challenge + 1 then handle_success msg socket
   else failwith "Random Challenge Failed"
+
+let handle_enc_msg s parent_msg msg =
+  match msg.op with
+  | "reg_success" ->
+      fprintf Stdlib.stdout "%s %!"
+        "\nRegistration Succesful! You can now login.\n";
+      handle_login msg s
+  | "reg_failure" ->
+      fprintf Stdlib.stdout "%s %!"
+        "\nUsername already exists, please try again.\n";
+      handle_register msg s
+  | _ -> ()
 
 (* [handle_msg str s] handles the server response [msg] according to its
    operation, and replies using socket [s]. *)
@@ -158,14 +173,11 @@ let handle_msg msg s =
           (extract_pub_info msg)
       in
       let shared_k = match new_keys.private_key with x, y -> y in
-      shared_key := shared_k;
+      shared_key := Z.to_string shared_k;
       let _ =
-        fprintf Stdlib.stdout "%s %!"
-          ("shared key is " ^ Z.to_string !shared_key)
+        fprintf Stdlib.stdout "%s %!" ("shared key is " ^ !shared_key)
       in
-      let decrypted_msg =
-        msg.dh_encrypted |> decrypt_dh (Z.to_string !shared_key)
-      in
+      let decrypted_msg = msg.dh_encrypted |> decrypt_dh !shared_key in
       fprintf Stdlib.stdout "%s %!"
         ("\n\ndecrypted message is: " ^ decrypted_msg ^ "\n\n");
       send_str
@@ -175,9 +187,7 @@ let handle_msg msg s =
              op = "random_challenge";
              id = uid;
              dh_encrypted =
-               encrypt_dh
-                 (Z.to_string !shared_key)
-                 (string_of_int !rand_challenge)
+               encrypt_dh !shared_key (string_of_int !rand_challenge)
                |> encrypt_rsa !rsa_pub_key
                |> dh_lst_to_str;
            })
@@ -185,6 +195,10 @@ let handle_msg msg s =
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";
       ""
   | "random_response" -> rand_response msg s
+  | "post_auth" ->
+      msg.dh_encrypted |> decrypt_dh !shared_key |> str_to_msg
+      |> handle_enc_msg s msg;
+      ""
   | _ -> ""
 
 (* [recieve_init s] listens for messages sent from the server on socket
