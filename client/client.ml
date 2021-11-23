@@ -47,6 +47,15 @@ let recieve s =
   in
   loop ()
 
+let prompt_uname_message () =
+  let uname = read_line () in
+  let _ =
+    fprintf Stdlib.stdout "%s %!"
+      "\nPlease enter the message, then hit enter.\n\n"
+  in
+  let msg = read_line () in
+  [ uname; msg ]
+
 (* [prompt_uname_pass ()] reads a username from stdin and then prompts
    the user for a password. It returns the list [uname;pass]*)
 let prompt_uname_pass () =
@@ -57,13 +66,6 @@ let prompt_uname_pass () =
   in
   let pass = read_line () in
   [ uname; pass ]
-
-(* match Core.In_channel.input_line Core.In_channel.stdin with | None ->
-   failwith "Aborting due to timeout." | Some uname -> ( fprintf
-   Stdlib.stdout "%s %!" "\nPlease enter your password, then hit
-   enter.\n"; match Core.In_channel.input_line Core.In_channel.stdin
-   with | None -> failwith "Aborting due to timeout." | Some passwd -> [
-   uname; passwd ]) *)
 
 (* [create_enc_msg parent_msg enc_msg] encryptes [enc_msg] and returns a
    string message with the encrypted message stored in
@@ -93,7 +95,9 @@ let handle_login msg socket =
    to the server using socket [socket].*)
 let handle_register msg socket =
   fprintf Stdlib.stdout "%s %!"
-    "\nPlease enter your new username, then hit enter.\n\n";
+    "\n\
+     Please enter your new username, then hit enter. Usernames must \
+     not contain any spaces.\n\n";
   match prompt_uname_pass () with
   | uname :: password :: e ->
       fprintf Stdlib.stdout "%s %!" "\nRegistering...\n";
@@ -127,6 +131,40 @@ let rec handle_success msg socket : string =
       ignore (handle_success msg socket);
       ""
 
+let handle_msg msg socket =
+  fprintf Stdlib.stdout "%s %!"
+    "\nPlease enter the username of the recipient, then hit enter.\n\n";
+  match prompt_uname_message () with
+  | reciever :: message :: e ->
+      fprintf Stdlib.stdout "%s %!" "\nRegistering...\n";
+      send_str
+        (create_enc_msg
+           { msg with op = "post_auth" }
+           { empty_msg with op = "send_msg"; reciever; message })
+        socket
+  | _ -> failwith "Message Sending Unsuccessful"
+
+let rec prompt_cmd msg socket =
+  fprintf Stdlib.stdout "%s %!"
+    "\n\
+     Available commands: \"send message\", \"list new messages\", \
+     \"list users\", \"quit\". Type a command and press enter. Note \
+     that after new messages are listed they will be deleted from the \
+     database for security purposes.\n\n";
+  let cmd = read_line () in
+  match cmd with
+  | "send message" -> handle_msg msg socket
+  | "list new messages" ->
+      send_str
+        (create_enc_msg
+           { msg with op = "post_auth" }
+           { empty_msg with op = "list_new_msgs" })
+        socket
+  | _ ->
+      fprintf Stdlib.stdout "%s %!"
+        "\nInvalid value. Please try again.\n";
+      prompt_cmd msg socket
+
 (* [rand_response str socket] extracts the random number challenge
    response from the message [str] sent by the server. Calls
    [handle_success socket] if the challenge was completed. Raises
@@ -154,14 +192,26 @@ let handle_enc_msg s parent_msg msg =
         "\nUsername already exists, please try again.\n";
       handle_register msg s
   | "login_success" ->
-      fprintf Stdlib.stdout "%s %!" "\nLogin Succesful! ...\n"
+      fprintf Stdlib.stdout "%s %!" "\nLogin Successful! \n";
+      prompt_cmd parent_msg s
       (* Leaving off here, now implement what happens after a successful
-         login*)
+         login *)
   | "login_failure" ->
       fprintf Stdlib.stdout "%s %!"
         "\nInvalid username or password, please try again. \n";
       let _ = handle_success parent_msg s in
       ()
+  | "message_success" ->
+      fprintf Stdlib.stdout "%s %!"
+        "\nEncrypted message successfully sent!. \n";
+      prompt_cmd parent_msg s
+  | "message_failure" ->
+      fprintf Stdlib.stdout "%s %!"
+        "\nRecipient username does not exist, please try again. \n";
+      prompt_cmd parent_msg s
+  | "list_message" ->
+      fprintf Stdlib.stdout "%s %!" msg.message;
+      prompt_cmd parent_msg s
   | _ -> ()
 
 (* [handle_msg str s] handles the server response [msg] according to its

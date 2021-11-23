@@ -103,7 +103,11 @@ let rec get_new_msgs_helper id user_list =
    exist.*)
 let get_new_msgs (id : session_id) (db : string) =
   let user_list = get_users db in
-  get_new_msgs_helper id user_list
+  let lst = get_new_msgs_helper id user_list in
+  List.fold_left
+    (fun acc msg ->
+      acc ^ "\nSender: " ^ msg.sender ^ "\nMessage: " ^ msg.msg)
+    "New messages: \n" lst
 
 (* [update_k key v json] returns the json object [json] updated by
    setting key [key] to value [v]. Raises "Empty json" if the

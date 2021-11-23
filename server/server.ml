@@ -115,6 +115,32 @@ let handle_enc_msg w parent_msg msg =
              { parent_msg with op = "post_auth" }
              { parent_msg with op = "login_failure" })
           w
+  | "send_msg" ->
+      print_string "sending message";
+      if check_user db_file msg.reciever then
+        let sender = get_uname parent_msg.id db_file in
+        let message = { sender; msg = msg.message } in
+        let _ = print_string message.msg in
+        let _ = put_msg msg.reciever message in
+        send_str
+          (create_enc_msg
+             { parent_msg with op = "post_auth" }
+             { parent_msg with op = "message_success" })
+          w
+      else
+        send_str
+          (create_enc_msg
+             { parent_msg with op = "post_auth" }
+             { parent_msg with op = "message_failure" })
+          w
+  | "list_new_msgs" ->
+      let new_msgs = get_new_msgs parent_msg.id db_file in
+      delete_msgs parent_msg.id;
+      send_str
+        (create_enc_msg
+           { parent_msg with op = "post_auth" }
+           { parent_msg with op = "list_message"; message = new_msgs })
+        w
   | _ -> ()
 
 (* [handle_msg msg w f] handles the string str sent from the client

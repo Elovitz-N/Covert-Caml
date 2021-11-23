@@ -59,7 +59,17 @@ let rec process lst msg =
           | "uname" -> process t { msg with uname = y }
           | "password" -> process t { msg with password = y }
           | "reciever" -> process t { msg with reciever = y }
-          | "message" -> process t { msg with message = y }
+          | "message" ->
+              process t
+                {
+                  msg with
+                  message =
+                    List.fold_left
+                      (fun acc x ->
+                        if String.contains x '=' then acc
+                        else acc ^ " " ^ x)
+                      y t;
+                }
           | _ -> process t msg)
       | _ -> msg)
   | [] -> msg
