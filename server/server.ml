@@ -77,10 +77,8 @@ let create_enc_msg parent_msg enc_msg =
 let handle_enc_msg w parent_msg msg =
   match msg.op with
   | "register" ->
-      let _ = print_string "registering" in
-
+      print_string "registering";
       if check_user db_file msg.uname then
-        (* TODO: As of now, this username check is not working*)
         send_str
           (create_enc_msg
              { parent_msg with op = "post_auth" }
@@ -89,12 +87,34 @@ let handle_enc_msg w parent_msg msg =
       else
         let _ = print_string "adding" in
         let _ = add_user parent_msg.id msg.uname msg.password in
+        let _ = print_string (get_uname parent_msg.id db_file) in
         send_str
           (create_enc_msg
              { parent_msg with op = "post_auth" }
              { parent_msg with op = "reg_success" })
           w
-  | "login" -> ()
+  | "login" ->
+      print_string "logging in";
+      put_id parent_msg.id msg.uname;
+      if
+        try
+          String.equal (get_uname parent_msg.id db_file) msg.uname
+          && String.equal
+               (get_password parent_msg.id db_file)
+               msg.password
+        with e -> false
+      then
+        send_str
+          (create_enc_msg
+             { parent_msg with op = "post_auth" }
+             { parent_msg with op = "login_success" })
+          w
+      else
+        send_str
+          (create_enc_msg
+             { parent_msg with op = "post_auth" }
+             { parent_msg with op = "login_failure" })
+          w
   | _ -> ()
 
 (* [handle_msg msg w f] handles the string str sent from the client
@@ -145,10 +165,7 @@ let handle_msg msg w f =
         w
   | "diffie_3" -> ()
   | "random_challenge" -> rand_challenge msg w
-  | "login" ->
-      ()
-      (* TODO - one task I can do soon is set up the session ID
-         generator and send it back to the client*)
+  | "login" -> ()
   | "register" -> () (* TODO *)
   | "post_auth" ->
       msg.dh_encrypted

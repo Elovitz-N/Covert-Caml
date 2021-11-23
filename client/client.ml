@@ -79,13 +79,13 @@ let handle_login msg socket =
   fprintf Stdlib.stdout "%s %!"
     "\nPlease enter your username, then hit enter.\n\n";
   match prompt_uname_pass () with
-  | uname :: passwd :: e ->
+  | uname :: password :: e ->
       fprintf Stdlib.stdout "%s %!" "\nLogging in...\n";
       send_str
-        ("op=login id=" ^ uid ^ " " ^ "username=" ^ uname ^ " "
-       ^ "password=" ^ passwd)
-        socket;
-      ()
+        (create_enc_msg
+           { msg with op = "post_auth" }
+           { empty_msg with op = "login"; uname; password })
+        socket
   | _ -> failwith "Login Unsuccessful"
 
 (* [handle_register msg socket] prompts the user for their username and
@@ -107,12 +107,12 @@ let handle_register msg socket =
 (* [handle_success socket] prompts the user to either login or register
    after the server authentication process has completed, and calls
    [handle_login socket] or [handle_register socket].*)
-let handle_success msg socket : string =
-  fprintf Stdlib.stdout "%s %!" "Random Challenge Succesfull\n";
+
+let rec handle_success msg socket : string =
   fprintf Stdlib.stdout "%s %!"
     "\n\
-     Handshake Complete! Type \"login\" and hit enter to login, or \
-     type \"register\" and hit enter to register.\n\n";
+     Type \"login\" and hit enter to login, or type \"register\" and \
+     hit enter to register.\n\n";
   let cmd = read_line () in
   match cmd with
   | "login" ->
@@ -122,7 +122,9 @@ let handle_success msg socket : string =
       handle_register msg socket;
       ""
   | _ ->
-      fprintf Stdlib.stdout "%s %!" "Invalid value. Please try again.\n";
+      fprintf Stdlib.stdout "%s %!"
+        "\nInvalid value. Please try again.\n";
+      ignore (handle_success msg socket);
       ""
 
 (* [rand_response str socket] extracts the random number challenge
@@ -133,7 +135,12 @@ let rand_response msg socket =
   let decrypted_msg =
     msg.dh_encrypted |> decrypt_dh !shared_key |> int_of_string
   in
-  if decrypted_msg = !rand_challenge + 1 then handle_success msg socket
+  if decrypted_msg = !rand_challenge + 1 then
+    let _ =
+      fprintf Stdlib.stdout "%s %!"
+        "\nRandom Challenge Succesfull\n\nHandshake Complete!\n"
+    in
+    handle_success msg socket
   else failwith "Random Challenge Failed"
 
 let handle_enc_msg s parent_msg msg =
@@ -146,6 +153,15 @@ let handle_enc_msg s parent_msg msg =
       fprintf Stdlib.stdout "%s %!"
         "\nUsername already exists, please try again.\n";
       handle_register msg s
+  | "login_success" ->
+      fprintf Stdlib.stdout "%s %!" "\nLogin Succesful! ...\n"
+      (* Leaving off here, now implement what happens after a successful
+         login*)
+  | "login_failure" ->
+      fprintf Stdlib.stdout "%s %!"
+        "\nInvalid username or password, please try again. \n";
+      let _ = handle_success parent_msg s in
+      ()
   | _ -> ()
 
 (* [handle_msg str s] handles the server response [msg] according to its

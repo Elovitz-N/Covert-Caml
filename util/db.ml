@@ -40,25 +40,19 @@ type user = {
 
 type t = { mutable users : user list }
 
-(*let update key f json = let rec update_json_obj = function | [] ->
-  begin match f None with None -> [] | Some v -> [ (key, v) ] end | ((k,
-  v) as m) :: tl -> if k = key then match f (Some v) with | None ->
-  update_json_obj tl | Some v' -> if v' == v then m :: tl else (k, v')
-  :: tl else m :: update_json_obj tl in
+let trim_quotes str = String.sub str 1 (String.length str - 2)
 
-  match json with | `Assoc obj -> `Assoc (update_json_obj obj) | _ ->
-  json *)
 let msgs_of_json json =
   {
-    sender = json |> member "username" |> to_string;
-    msg = json |> member "message" |> to_string;
+    sender = json |> member "username" |> to_string |> trim_quotes;
+    msg = json |> member "message" |> to_string |> trim_quotes;
   }
 
 let users_of_json json =
   {
-    session_id = json |> member "session id" |> to_string;
-    username = json |> member "username" |> to_string;
-    password = json |> member "password" |> to_string;
+    session_id = json |> member "session id" |> to_string |> trim_quotes;
+    username = json |> member "username" |> to_string |> trim_quotes;
+    password = json |> member "password" |> to_string |> trim_quotes;
     messages =
       json |> member "new messages" |> to_list |> List.map msgs_of_json;
   }
@@ -70,7 +64,7 @@ let get_users (db : string) =
 (* [check_user db uname] returns true if there is a user with username
    [uname] in the database file [db].*)
 let check_user (db : string) uname =
-  List.filter (fun x -> x.username = uname) (get_users db) != []
+  List.filter (fun x -> x.username = uname) (get_users db) <> []
 
 let from_json db = { users = get_users db }
 
@@ -118,14 +112,9 @@ let update_k key (v : Yojson.Basic.t) (json : Yojson.Basic.t) =
   let rec update_key = function
     | [] -> failwith "Empty json"
     | ((k, v') as m) :: tl ->
-        let _ = print_string ("\nk = " ^ k ^ "\n") in
         if k = key then (k, v) :: tl else m :: update_key tl
   in
-  match json with
-  | `Assoc obj -> `Assoc (update_key obj)
-  | _ ->
-      print_string "json pattern";
-      json
+  match json with `Assoc obj -> `Assoc (update_key obj) | _ -> json
 
 (* [update_list key v check_k check_v json_lst delete_msgs] returns the
    updated json users list. The function finds the user to update by
