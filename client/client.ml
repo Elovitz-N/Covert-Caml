@@ -160,6 +160,15 @@ let rec prompt_cmd msg socket =
            { msg with op = "post_auth" }
            { empty_msg with op = "list_new_msgs" })
         socket
+  | "list users" ->
+      send_str
+        (create_enc_msg
+           { msg with op = "post_auth" }
+           { empty_msg with op = "list_users" })
+        socket
+  | "quit" ->
+      fprintf Stdlib.stdout "%s %!" "\nExiting...\n";
+      exit 0
   | _ ->
       fprintf Stdlib.stdout "%s %!"
         "\nInvalid value. Please try again.\n";
@@ -210,6 +219,9 @@ let handle_enc_msg s parent_msg msg =
         "\nRecipient username does not exist, please try again. \n";
       prompt_cmd parent_msg s
   | "list_message" ->
+      fprintf Stdlib.stdout "%s %!" msg.message;
+      prompt_cmd parent_msg s
+  | "list_unames" ->
       fprintf Stdlib.stdout "%s %!" msg.message;
       prompt_cmd parent_msg s
   | _ -> ()

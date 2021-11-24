@@ -254,9 +254,14 @@ let delete_msgs (id : string) =
   in
   to_file file new_j
 
-(* [list_unames] returns a list of all the usernames in the database
-   file. *)
-let list_unames () = failwith "unimplemented"
+let list_unames db =
+  let users = get_users db in
+  let res =
+    List.fold_left
+      (fun acc user -> acc ^ user.username ^ ", ")
+      "List of usernames: " users
+  in
+  String.sub res 0 (String.length res - 2) ^ "\n"
 
 (* [create_db ()] creates the json database file and initializes an
    empty users array. *)

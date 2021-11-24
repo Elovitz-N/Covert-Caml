@@ -141,6 +141,16 @@ let handle_enc_msg w parent_msg msg =
            { parent_msg with op = "post_auth" }
            { parent_msg with op = "list_message"; message = new_msgs })
         w
+  | "list_users" ->
+      send_str
+        (create_enc_msg
+           { parent_msg with op = "post_auth" }
+           {
+             parent_msg with
+             op = "list_unames";
+             message = list_unames db_file;
+           })
+        w
   | _ -> ()
 
 (* [handle_msg msg w f] handles the string str sent from the client
