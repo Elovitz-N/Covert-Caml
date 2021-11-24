@@ -40,45 +40,44 @@ type user = {
 
 type t = { mutable users : user list }
 
-let trim_quotes str = String.sub str 1 (String.length str - 2)
+(*let update key f json = let rec update_json_obj = function | [] ->
+  begin match f None with None -> [] | Some v -> [ (key, v) ] end | ((k,
+  v) as m) :: tl -> if k = key then match f (Some v) with | None ->
+  update_json_obj tl | Some v' -> if v' == v then m :: tl else (k, v')
+  :: tl else m :: update_json_obj tl in
 
+  match json with | `Assoc obj -> `Assoc (update_json_obj obj) | _ ->
+  json *)
 let msgs_of_json json =
   {
-    sender = json |> member "username" |> to_string |> trim_quotes;
-    msg = json |> member "message" |> to_string |> trim_quotes;
+    sender = json |> member "username" |> to_string;
+    msg = json |> member "message" |> to_string;
   }
 
 let users_of_json json =
   {
-    session_id = json |> member "session id" |> to_string |> trim_quotes;
-    username = json |> member "username" |> to_string |> trim_quotes;
-    password = json |> member "password" |> to_string |> trim_quotes;
+    session_id = json |> member "session id" |> to_string;
+    username = json |> member "username" |> to_string;
+    password = json |> member "password" |> to_string;
     messages =
       json |> member "new messages" |> to_list |> List.map msgs_of_json;
   }
 
-let get_users (db : string) =
-  let json = Yojson.Basic.from_file db in
+let get_users json =
   json |> member "users" |> to_list |> List.map users_of_json
 
-(* [check_user db uname] returns true if there is a user with username
-   [uname] in the database file [db].*)
-let check_user (db : string) uname =
-  List.filter (fun x -> x.username = uname) (get_users db) <> []
+let from_json json = { users = get_users json }
 
-let from_json db = { users = get_users db }
-
-let rec get_username_helper id lst =
-  match lst with
+let rec get_username_helper id user_list =
+  match user_list with
   | [] -> raise (DNE id)
   | h :: t ->
       if h.session_id = id then h.username else get_username_helper id t
 
 (* [get_uname id] returns the username associated with the session id
    [id]. Raises "DNE" if that session id does not exist. *)
-let get_uname (id : session_id) (db : string) : string =
-  let user_list = get_users db in
-  get_username_helper id user_list
+let get_uname (id : session_id) (chat : t) : string =
+  get_username_helper id chat.users
 
 let rec get_password_helper id user_list =
   match user_list with
@@ -88,9 +87,8 @@ let rec get_password_helper id user_list =
 
 (* [get_password id] returns the password associated with the session id
    [id]. Raises "DNE" if that session id does not exist.*)
-let get_password (id : session_id) (db : string) =
-  let user_list = get_users db in
-  get_password_helper id user_list
+let get_password (id : session_id) (chat : t) =
+  get_password_helper id chat.users
 
 let rec get_new_msgs_helper id user_list =
   match user_list with
@@ -101,13 +99,12 @@ let rec get_new_msgs_helper id user_list =
 (* [get_new_msgs id] returns a list of the new messages associated with
    the session id [id]. Raises "DNE" if that session id does not
    exist.*)
-let get_new_msgs (id : session_id) (db : string) =
-  let user_list = get_users db in
-  let lst = get_new_msgs_helper id user_list in
-  List.fold_left
-    (fun acc msg ->
-      acc ^ "\nSender: " ^ msg.sender ^ "\nMessage: " ^ msg.msg)
-    "New messages: \n" lst
+let get_new_msgs (id : session_id) (chat : t) =
+  get_new_msgs_helper id chat.users
+
+(* [get_dh_key id] returns the dh key associated with session id
+   [id]. *)
+let get_dh_key (id : session_id) = failwith "unimplemented"
 
 (* [update_k key v json] returns the json object [json] updated by
    setting key [key] to value [v]. Raises "Empty json" if the
@@ -116,9 +113,14 @@ let update_k key (v : Yojson.Basic.t) (json : Yojson.Basic.t) =
   let rec update_key = function
     | [] -> failwith "Empty json"
     | ((k, v') as m) :: tl ->
+        let _ = print_string ("\nk = " ^ k ^ "\n") in
         if k = key then (k, v) :: tl else m :: update_key tl
   in
-  match json with `Assoc obj -> `Assoc (update_key obj) | _ -> json
+  match json with
+  | `Assoc obj -> `Assoc (update_key obj)
+  | _ ->
+      print_string "json pattern";
+      json
 
 (* [update_list key v check_k check_v json_lst delete_msgs] returns the
    updated json users list. The function finds the user to update by
@@ -180,6 +182,16 @@ let update key v check_k check_v (json : Yojson.Basic.t) delete_msgs add
       `Assoc (update_json obj key v check_k check_v delete_msgs add)
   | _ -> json
 
+(* [put_dh_key id key] stores the dh key associated with session id [id]
+   in the json file. *)
+let put_dh_key (id : session_id) (key : string) =
+  let json = from_file file in
+  let new_json =
+    update "dh key" (`String key) "session id" (`String id) json false
+      false
+  in
+  to_file file new_json
+
 (* [put_uname id new_uname] replaces the username in the database file
    with the specified username [new_uname] associated with the session
    id [id]. *)
@@ -228,15 +240,20 @@ let put_id (id : string) (uname : string) =
   in
   to_file file new_json
 
-(* [add_user id uname passwd] adds a user to the database file with
-   session id [id], username [uname], password [passwd], and an empty
-   new messages array. This function will be called when a client
+(* [add_user id dh)key uname passwd] adds a user to the database file
+   with session id [id], username [uname], password [passwd], and an
+   empty new messages array. This function will be called when a client
    creates an account with the service. *)
-let add_user (id : string) (uname : string) (passwd : string) =
+let add_user
+    (id : string)
+    (dh_key : string)
+    (uname : string)
+    (passwd : string) =
   let j = from_file file in
   let user =
     from_string
       ("{\n         \"session id\": \"" ^ id
+     ^ "\",\n         \"dh key\": \"" ^ dh_key
      ^ "\",\n         \"username\": \"" ^ uname
      ^ "\",\n         \"password\": \"" ^ passwd
      ^ "\",\n         \"new messages\": []\n       }")
@@ -254,14 +271,9 @@ let delete_msgs (id : string) =
   in
   to_file file new_j
 
-let list_unames db =
-  let users = get_users db in
-  let res =
-    List.fold_left
-      (fun acc user -> acc ^ user.username ^ ", ")
-      "List of usernames: " users
-  in
-  String.sub res 0 (String.length res - 2) ^ "\n"
+(* [list_unames] returns a list of all the usernames in the database
+   file. *)
+let list_unames () = failwith "unimplemented"
 
 (* [create_db ()] creates the json database file and initializes an
    empty users array. *)
@@ -292,5 +304,6 @@ let test_write () =
       (`String "sdafj434jnl34g33il4h3") j false false
   in
   to_file "../data/test3.json" new_j;
-  add_user "sess" "dummyu" "dummyp";
+  put_dh_key "fhgjfsdaifhua2wn22nsdf" "test_key2";
+  add_user "sess" "dh" "dummyu" "dummyp";
   print_newline ()

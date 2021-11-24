@@ -1,10 +1,5 @@
 open Keys
 
-type info = {
-  id : string;
-  dh_key : Z.t;
-}
-
 type msg = {
   op : string;
   id : string;
@@ -14,10 +9,6 @@ type msg = {
   pub_key_client : string;
   pub_key_server : string;
   dh_encrypted : string;
-  uname : string;
-  password : string;
-  reciever : string;
-  message : string;
 }
 
 (* [empty_msg] is an message initialized with unimportant values. *)
@@ -31,10 +22,6 @@ let empty_msg =
     pub_key_client = "";
     pub_key_server = "";
     dh_encrypted = "";
-    uname = "";
-    password = "";
-    reciever = "";
-    message = "";
   }
 
 (* [process lst msg] processes the list of strings lst and outputs a
@@ -56,20 +43,6 @@ let rec process lst msg =
               process t { msg with pub_key_client = y }
           | "pub_key_server" ->
               process t { msg with pub_key_server = y }
-          | "uname" -> process t { msg with uname = y }
-          | "password" -> process t { msg with password = y }
-          | "reciever" -> process t { msg with reciever = y }
-          | "message" ->
-              process t
-                {
-                  msg with
-                  message =
-                    List.fold_left
-                      (fun acc x ->
-                        if String.contains x '=' then acc
-                        else acc ^ " " ^ x)
-                      y t;
-                }
           | _ -> process t msg)
       | _ -> msg)
   | [] -> msg
@@ -108,9 +81,7 @@ let msg_to_str msg =
   ^ " mod_p=" ^ Z.to_string msg.mod_p ^ " prim_root_p="
   ^ Z.to_string msg.prim_root_p
   ^ " pub_key_client=" ^ msg.pub_key_client ^ " pub_key_server="
-  ^ msg.pub_key_server ^ " uname=" ^ msg.uname ^ " password="
-  ^ msg.password ^ " reciever=" ^ msg.reciever ^ " message="
-  ^ msg.message ^ " DIFFIE=" ^ msg.dh_encrypted
+  ^ msg.pub_key_server ^ " DIFFIE=" ^ msg.dh_encrypted
 
 let extract_pub_info msg =
   { mod_p = msg.mod_p; prim_root_p = msg.prim_root_p }
@@ -119,7 +90,3 @@ let dh_str_to_lst str = Str.split (Str.regexp "[BREAK_HERE]+") str
 
 let dh_lst_to_str lst =
   List.fold_left (fun x y -> x ^ "BREAK_HERE" ^ y) "" lst
-
-let get_key id (lst : info list) =
-  let res = List.filter (fun (x : info) -> x.id = id) lst |> List.hd in
-  Z.to_string res.dh_key
