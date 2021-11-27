@@ -108,7 +108,133 @@ let keys_tests' =
   ]
   @ test_s_box
 
-let suite = "Testing" >::: List.flatten [ keys_tests' ]
+(* begin msg.ml tests *)
+let process_test (name : string) lst msg expected_output : test =
+  name >:: fun _ ->
+  assert_equal expected_output (process lst msg) ~printer:msg_to_str
+
+let encrypted_str_test (name : string) str keyword expected_output :
+    test =
+  name >:: fun _ ->
+  assert_equal expected_output (encrypted_str str keyword)
+    ~printer:(fun x -> x)
+
+let str_to_msg_test (name : string) str expected_output : test =
+  name >:: fun _ ->
+  assert_equal expected_output (str_to_msg str) ~printer:msg_to_str
+
+let msg_to_str_test (name : string) msg expected_output : test =
+  name >:: fun _ ->
+  assert_equal expected_output (msg_to_str msg) ~printer:(fun x -> x)
+
+let msg_to_str_test2 (name : string) msg : test =
+  name >:: fun _ ->
+  assert_equal msg (str_to_msg (msg_to_str msg)) ~printer:msg_to_str
+
+let lst_to_str_test (name : string) lst : test =
+  name >:: fun _ -> assert_equal lst (dh_str_to_lst (dh_lst_to_str lst))
+
+let process_tests =
+  [
+    process_test "process test with empty msg" [ "op=test" ] empty_msg
+      { empty_msg with op = "test" };
+    process_test "process test with non-empty msg" [ "op=test" ]
+      { empty_msg with op = "notest" }
+      { empty_msg with op = "test" };
+    process_test "process test with empty lst" []
+      { empty_msg with r = 2 }
+      { empty_msg with r = 2 };
+    process_test "process test with message"
+      [
+        "op=test";
+        "message=hello";
+        "this";
+        "is";
+        "a";
+        "message";
+        "next=test";
+      ]
+      { empty_msg with r = 2 }
+      {
+        empty_msg with
+        op = "test";
+        r = 2;
+        message = "hello this is a message";
+      };
+  ]
+
+let encrypted_str_tests =
+  [
+    encrypted_str_test "encrypted_str with keyword not found"
+      "asfdf asdf fsd" "test" "";
+    encrypted_str_test "encrypted_str with keyword found"
+      "asfdf as=df fsd" "as" "df fsd";
+    encrypted_str_test "encrypted_str with empty string" "" "as" "";
+  ]
+
+let str_to_msg_tests =
+  [
+    str_to_msg_test "str_to_msg empty string" "" empty_msg;
+    str_to_msg_test "str_to_msg non-empty string" "r=4 op=test "
+      { empty_msg with op = "test"; r = 4 };
+    str_to_msg_test "str_to_msg non-empty string and dh string"
+      "r=4 op=test DIFFIE=blah "
+      { empty_msg with op = "test"; r = 4; dh_encrypted = "blah " };
+  ]
+
+let msg_to_str_tests =
+  [
+    msg_to_str_test "msg_to_str empty string" empty_msg
+      "op= id= r=0 mod_p=0 prim_root_p=0 pub_key_client= \
+       pub_key_server= uname= password= reciever= message= DIFFIE=";
+    msg_to_str_test "msg_to_str non-empty string"
+      { empty_msg with op = "test"; r = 4 }
+      "op=test id= r=4 mod_p=0 prim_root_p=0 pub_key_client= \
+       pub_key_server= uname= password= reciever= message= DIFFIE=";
+    msg_to_str_test "msg_to_str non-empty string and dh string"
+      { empty_msg with op = "test"; r = 4; dh_encrypted = "blah " }
+      "op=test id= r=4 mod_p=0 prim_root_p=0 pub_key_client= \
+       pub_key_server= uname= password= reciever= message= \
+       DIFFIE=blah ";
+  ]
+
+let msg_to_str_tests2 =
+  [
+    msg_to_str_test2 "reverse msg 1"
+      {
+        op = "test";
+        id = "test2";
+        r = 10;
+        mod_p = Z.zero;
+        prim_root_p = Z.zero;
+        pub_key_client = "test3";
+        pub_key_server = "test4";
+        dh_encrypted = "blah blah blah";
+        uname = "test5";
+        password = "test6";
+        reciever = "test7";
+        message = "luke i am your father.";
+      };
+  ]
+
+let lst_to_str_tests =
+  [
+    lst_to_str_test "list to string empty inverse test" [];
+    lst_to_str_test "list to string non-empty inverse test"
+      [ "hi "; "this"; " is"; "a"; "t e s t" ];
+  ]
+
+let suite =
+  "Testing"
+  >::: List.flatten
+         [
+           process_tests;
+           encrypted_str_tests;
+           str_to_msg_tests;
+           msg_to_str_tests;
+           msg_to_str_tests2;
+           lst_to_str_tests;
+         ]
 
 let _ = run_test_tt_main suite
 

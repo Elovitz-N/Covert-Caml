@@ -300,16 +300,16 @@ let () =
             "\nGenerating RSA public key, private key... \n"
         in
         gen_rsa_keys ()
-  | _ ->
-      (match Core.In_channel.read_lines "private_key.txt" with
+  | _ -> (
+      match Core.In_channel.read_lines "private_key.txt" with
       | [] ->
           failwith
             "No private key found. Try running dune exec ./server.exe \
              keygen"
       | key :: _ ->
+          create_db ();
           load_rsa_keys ();
-          print_string "here");
-      let _ = run () in
-      never_returns (Scheduler.go ())
+          let _ = run () in
+          never_returns (Scheduler.go ()))
 
 (* let word = test_write () *)

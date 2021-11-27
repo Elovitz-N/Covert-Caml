@@ -29,24 +29,6 @@ let rsa_pub_key = ref ("", "")
 let send_str (str : string) socket =
   ignore (write_substring socket str 0 (String.length str))
 
-let recieve s =
-  let buffer_size = 4096 in
-  let buffer = Bytes.create buffer_size in
-  let rec loop () =
-    match read s buffer 0 buffer_size with
-    | 0 -> ()
-    | bytes_read ->
-        let read = Bytes.sub buffer 0 bytes_read in
-        let str = Bytes.to_string read in
-        let _ =
-          fprintf Stdlib.stdout "message from serverr: %s\n %!" str
-        in
-        (* TODO: this quit is not working *)
-        ignore (write stdout buffer 0 bytes_read);
-        loop ()
-  in
-  loop ()
-
 let prompt_uname_message () =
   let uname = read_line () in
   let _ =
@@ -299,21 +281,6 @@ let recieve_init s =
   in
   loop ()
 
-let send s =
-  let buffer_size = 4096 in
-  let buffer = Bytes.create buffer_size in
-  let rec loop () =
-    match read stdin buffer 0 buffer_size with
-    | 0 -> ()
-    | bytes_read ->
-        let read = Bytes.sub buffer 0 bytes_read in
-        let str = Bytes.to_string read in
-        if str = "quit" then exit 0
-        else ignore (write s buffer 0 bytes_read);
-        loop ()
-  in
-  loop ()
-
 (* [handshake s] sends the message to the server using socket [s] that
    initializes the handshake*)
 let handshake s =
@@ -348,13 +315,9 @@ let main () =
   let ip = Sys.argv.(1) in
   let port = 8886 in
   let socket = socket PF_INET SOCK_STREAM 0 in
-  (* TODO: figure out why all these print statements never print! *)
   connect socket (ADDR_INET (inet_addr_of_string ip, port));
   handshake socket;
   recieve_init socket
-(* match fork () with | 0 -> (* Write to socket (send a msg) *) send
-   socket; shutdown socket SHUTDOWN_SEND; exit 0 | _ -> (* Read from
-   socket (read a msg)*) recieve socket; close stdout; wait () *)
 ;;
 
 main ()

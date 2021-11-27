@@ -266,9 +266,12 @@ let list_unames db =
 (* [create_db ()] creates the json database file and initializes an
    empty users array. *)
 let create_db () =
-  let json = from_string "{\"users\":[]}" in
-  to_file file json
+  if Sys.file_exists file then ()
+  else
+    let json = from_string "{\"users\":[]}" in
+    to_file file json
 
+(* NOTE: delete this fctn before final submission*)
 let test_write () =
   print_string "testing";
   print_newline ();
