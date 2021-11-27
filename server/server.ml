@@ -311,5 +311,3 @@ let () =
           load_rsa_keys ();
           let _ = run () in
           never_returns (Scheduler.go ()))
-
-(* let word = test_write () *)
