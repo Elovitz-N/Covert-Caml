@@ -185,8 +185,6 @@ let handle_enc_msg s parent_msg msg =
   | "login_success" ->
       fprintf Stdlib.stdout "%s %!" "\nLogin Successful! \n";
       prompt_cmd parent_msg s
-      (* Leaving off here, now implement what happens after a successful
-         login *)
   | "login_failure" ->
       fprintf Stdlib.stdout "%s %!"
         "\nInvalid username or password, please try again. \n";
@@ -201,57 +199,56 @@ let handle_enc_msg s parent_msg msg =
         "\nRecipient username does not exist, please try again. \n";
       prompt_cmd parent_msg s
   | "list_message" ->
-      fprintf Stdlib.stdout "%s %!" msg.message;
+      fprintf Stdlib.stdout "%s %!\n" msg.message;
       prompt_cmd parent_msg s
   | "list_unames" ->
-      fprintf Stdlib.stdout "%s %!" msg.message;
+      fprintf Stdlib.stdout "\n%s %!" msg.message;
       prompt_cmd parent_msg s
   | _ -> ()
+
+let begin_dh msg s =
+  send_str
+    (msg_to_str
+       {
+         msg with
+         op = "diffie_1";
+         id = uid;
+         r = 0;
+         mod_p = dh_pub_info.mod_p;
+         prim_root_p = dh_pub_info.prim_root_p;
+         pub_key_client = dh_keys |> dh_get_public_key;
+       })
+    s
+
+let begin_rand msg s =
+  let new_keys =
+    create_dh_shared_key dh_keys msg.pub_key_server
+      (extract_pub_info msg)
+  in
+  let shared_k = match new_keys.private_key with x, y -> y in
+  shared_key := Z.to_string shared_k;
+  send_str
+    (msg_to_str
+       {
+         msg with
+         op = "random_challenge";
+         id = uid;
+         dh_encrypted =
+           encrypt_dh !shared_key (string_of_int !rand_challenge)
+           |> encrypt_rsa !rsa_pub_key
+           |> dh_lst_to_str;
+       })
+    s
 
 (* [handle_msg str s] handles the server response [msg] according to its
    operation, and replies using socket [s]. *)
 let handle_msg msg s =
   match msg.op with
   | "ok" ->
-      send_str
-        (msg_to_str
-           {
-             msg with
-             op = "diffie_1";
-             id = uid;
-             r = 0;
-             mod_p = dh_pub_info.mod_p;
-             prim_root_p = dh_pub_info.prim_root_p;
-             pub_key_client = dh_keys |> dh_get_public_key;
-           })
-        s;
-      fprintf Stdlib.stdout "%s %!" "Diffie Hellman initiating\n";
+      begin_dh msg s;
       ""
   | "diffie_2" ->
-      let new_keys =
-        create_dh_shared_key dh_keys msg.pub_key_server
-          (extract_pub_info msg)
-      in
-      let shared_k = match new_keys.private_key with x, y -> y in
-      shared_key := Z.to_string shared_k;
-      let _ =
-        fprintf Stdlib.stdout "%s %!" ("shared key is " ^ !shared_key)
-      in
-      let decrypted_msg = msg.dh_encrypted |> decrypt_dh !shared_key in
-      fprintf Stdlib.stdout "%s %!"
-        ("\n\ndecrypted message is: " ^ decrypted_msg ^ "\n\n");
-      send_str
-        (msg_to_str
-           {
-             msg with
-             op = "random_challenge";
-             id = uid;
-             dh_encrypted =
-               encrypt_dh !shared_key (string_of_int !rand_challenge)
-               |> encrypt_rsa !rsa_pub_key
-               |> dh_lst_to_str;
-           })
-        s;
+      begin_rand msg s;
       fprintf Stdlib.stdout "%s %!" "Diffie Hellman complete\n";
       ""
   | "random_response" -> rand_response msg s
@@ -272,9 +269,6 @@ let recieve_init s =
     | bytes_read -> (
         let read = Bytes.sub buffer 0 bytes_read in
         let str = Bytes.to_string read in
-        let _ =
-          fprintf Stdlib.stdout "message from server: %s\n %!" str
-        in
         match handle_msg (str_to_msg str) s with
         | "complete" -> ()
         | _ -> loop ())
@@ -291,13 +285,7 @@ let load_pub_key () =
   | [ x; y ] -> rsa_pub_key := (x, y)
   | _ -> failwith "Invalid key found at /client/public_key.txt"
 
-let main () =
-  fprintf Stdlib.stdout "%s %!" "Loading Server Public Key...\n";
-  load_pub_key ();
-
-  fprintf Stdlib.stdout "%s %!" "Connecting to Server...\n";
-  (* TODO: check more aggressively to make sure host is a valid IP
-     addr *)
+let check_args () =
   (if Array.length Sys.argv < 2 then
    let _ =
      fprintf Stdlib.stdout "%s %!"
@@ -305,12 +293,23 @@ let main () =
         Missing Host IP address. To run, use ./client/client.exe <host>\n"
    in
    exit 2);
-  (if Array.length Sys.argv > 2 then
-   let _ =
-     fprintf Stdlib.stdout "%s %!"
-       "\nToo many arguments. To run, use ./client/client.exe <host> \n"
-   in
-   exit 2);
+  if Array.length Sys.argv > 2 then
+    let _ =
+      fprintf Stdlib.stdout "%s %!"
+        "\n\
+         Too many arguments. To run, use ./client/client.exe <host> \n"
+    in
+    exit 2
+
+let main () =
+  fprintf Stdlib.stdout "%s %!" "Initiating Handshake...\n";
+  fprintf Stdlib.stdout "%s %!" "Loading Server Public Key...\n";
+
+  load_pub_key ();
+
+  fprintf Stdlib.stdout "%s %!" "Connecting to Server...\n";
+
+  check_args ();
 
   let ip = Sys.argv.(1) in
   let port = 8886 in

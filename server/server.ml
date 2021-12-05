@@ -71,76 +71,79 @@ let create_enc_msg parent_msg enc_msg =
   in
   msg_to_str { parent_msg with dh_encrypted = enc }
 
+let enc_register parent_msg msg w =
+  if check_user db_file msg.uname then
+    send_str
+      (create_enc_msg
+         { parent_msg with op = "post_auth" }
+         { parent_msg with op = "reg_failure" })
+      w
+  else
+    let _ = print_string "\nadding user to database\n" in
+    let _ = add_user parent_msg.id msg.uname msg.password in
+    send_str
+      (create_enc_msg
+         { parent_msg with op = "post_auth" }
+         { parent_msg with op = "reg_success" })
+      w
+
+let enc_login w parent_msg msg =
+  print_string "\nlogging in user\n";
+  put_id parent_msg.id msg.uname;
+  if
+    try
+      String.equal (get_uname parent_msg.id db_file) msg.uname
+      && String.equal (get_password parent_msg.id db_file) msg.password
+    with e -> false
+  then
+    send_str
+      (create_enc_msg
+         { parent_msg with op = "post_auth" }
+         { parent_msg with op = "login_success" })
+      w
+  else
+    send_str
+      (create_enc_msg
+         { parent_msg with op = "post_auth" }
+         { parent_msg with op = "login_failure" })
+      w
+
+let enc_send_msg parent_msg msg w =
+  print_string "\nsending message to user\n";
+  if check_user db_file msg.reciever then
+    let sender = get_uname parent_msg.id db_file in
+    let message = { sender; msg = msg.message } in
+    let _ = put_msg msg.reciever message in
+    send_str
+      (create_enc_msg
+         { parent_msg with op = "post_auth" }
+         { parent_msg with op = "message_success" })
+      w
+  else
+    send_str
+      (create_enc_msg
+         { parent_msg with op = "post_auth" }
+         { parent_msg with op = "message_failure" })
+      w
+
+let enc_list_msgs parent_msg msg w =
+  let new_msgs = get_new_msgs parent_msg.id db_file in
+  delete_msgs parent_msg.id;
+  send_str
+    (create_enc_msg
+       { parent_msg with op = "post_auth" }
+       { parent_msg with op = "list_message"; message = new_msgs })
+    w
+
 (* [handle__enc_msg msg w] handles the message msg sent from the client
    in the encrypted portion of the message based on its operation, using
    writer [w] as arguments in functions that it calls.*)
 let handle_enc_msg w parent_msg msg =
   match msg.op with
-  | "register" ->
-      print_string "registering";
-      if check_user db_file msg.uname then
-        send_str
-          (create_enc_msg
-             { parent_msg with op = "post_auth" }
-             { parent_msg with op = "reg_failure" })
-          w
-      else
-        let _ = print_string "adding" in
-        let _ = add_user parent_msg.id msg.uname msg.password in
-        let _ = print_string (get_uname parent_msg.id db_file) in
-        send_str
-          (create_enc_msg
-             { parent_msg with op = "post_auth" }
-             { parent_msg with op = "reg_success" })
-          w
-  | "login" ->
-      print_string "logging in";
-      put_id parent_msg.id msg.uname;
-      if
-        try
-          String.equal (get_uname parent_msg.id db_file) msg.uname
-          && String.equal
-               (get_password parent_msg.id db_file)
-               msg.password
-        with e -> false
-      then
-        send_str
-          (create_enc_msg
-             { parent_msg with op = "post_auth" }
-             { parent_msg with op = "login_success" })
-          w
-      else
-        send_str
-          (create_enc_msg
-             { parent_msg with op = "post_auth" }
-             { parent_msg with op = "login_failure" })
-          w
-  | "send_msg" ->
-      print_string "sending message";
-      if check_user db_file msg.reciever then
-        let sender = get_uname parent_msg.id db_file in
-        let message = { sender; msg = msg.message } in
-        let _ = print_string message.msg in
-        let _ = put_msg msg.reciever message in
-        send_str
-          (create_enc_msg
-             { parent_msg with op = "post_auth" }
-             { parent_msg with op = "message_success" })
-          w
-      else
-        send_str
-          (create_enc_msg
-             { parent_msg with op = "post_auth" }
-             { parent_msg with op = "message_failure" })
-          w
-  | "list_new_msgs" ->
-      let new_msgs = get_new_msgs parent_msg.id db_file in
-      delete_msgs parent_msg.id;
-      send_str
-        (create_enc_msg
-           { parent_msg with op = "post_auth" }
-           { parent_msg with op = "list_message"; message = new_msgs })
-        w
+  | "register" -> enc_register parent_msg msg w
+  | "login" -> enc_login w parent_msg msg
+  | "send_msg" -> enc_send_msg parent_msg msg w
+  | "list_new_msgs" -> enc_list_msgs parent_msg msg w
   | "list_users" ->
       send_str
         (create_enc_msg
@@ -153,75 +156,57 @@ let handle_enc_msg w parent_msg msg =
         w
   | _ -> ()
 
+let diffie_1 msg w =
+  let pub_info = extract_pub_info msg in
+  let dh_keys = pub_info |> create_dh_keys in
+  let new_keys =
+    create_dh_shared_key dh_keys msg.pub_key_client pub_info
+  in
+  let shared_key = match new_keys.private_key with x, y -> y in
+  info_lst := { id = msg.id; dh_key = shared_key } :: !info_lst;
+
+  (* Protocol for storing dh keys: 1) server derives dh key, stores <id,
+     dh_key> 2) client logs in with id <uname, pass> 3) server stores id
+     and dh_key with that uname, pass so when the server recieves a
+     message, it firsts: checks the list to find the dh key associated
+     with that id. Then, it looks at the action trying to be performed.
+     If the action is login, it logs the user in. If it is register, it
+     registers the user. In both of those cases it stores the id and
+     dh_key with those users. If the action is list users, it checks to
+     make sure the user is logged in by looking at the dh key used and
+     seeing if that dh key exists in the db. This works bc in order to
+     decrypt the message, the dh key must have been a valid key. If the
+     op is send a message, the server authenticates the same way, and
+     then sends the message. *)
+  send_str
+    (msg_to_str
+       {
+         msg with
+         op = "diffie_2";
+         pub_key_server = dh_keys |> dh_get_public_key;
+         mod_p = pub_info.mod_p;
+         prim_root_p = pub_info.prim_root_p;
+         pub_key_client = msg.pub_key_client;
+         dh_encrypted =
+           encrypt_dh
+             (Z.to_string shared_key)
+             "encryption test is working";
+       })
+    w
+
 (* [handle_msg msg w f] handles the string str sent from the client
    based on its operation, using writer [w] and file [f] as arguments in
    functions that it calls.*)
 let handle_msg msg w f =
   match msg.op with
   | "init" -> send_str (msg_to_str { msg with op = "ok" }) w
-  | "diffie_1" ->
-      let _ = print_string "diffie_1 beginning" in
-      let pub_info = extract_pub_info msg in
-      let dh_keys = pub_info |> create_dh_keys in
-      let new_keys =
-        create_dh_shared_key dh_keys msg.pub_key_client pub_info
-      in
-      let shared_key = match new_keys.private_key with x, y -> y in
-      info_lst := { id = msg.id; dh_key = shared_key } :: !info_lst;
-      print_string ("\nshared key is " ^ Z.to_string shared_key);
-
-      (* Protocol for storing dh keys: 1) server derives dh key, stores
-         <id, dh_key> 2) client logs in with id <uname, pass> 3) server
-         stores id and dh_key with that uname, pass so when the server
-         recieves a message, it firsts: checks the list to find the dh
-         key associated with that id. Then, it looks at the action
-         trying to be performed. If the action is login, it logs the
-         user in. If it is register, it registers the user. In both of
-         those cases it stores the id and dh_key with those users. If
-         the action is list users, it checks to make sure the user is
-         logged in by looking at the dh key used and seeing if that dh
-         key exists in the db. This works bc in order to decrypt the
-         message, the dh key must have been a valid key. If the op is
-         send a message, the server authenticates the same way, and then
-         sends the message. *)
-      send_str
-        (msg_to_str
-           {
-             msg with
-             op = "diffie_2";
-             pub_key_server = dh_keys |> dh_get_public_key;
-             mod_p = pub_info.mod_p;
-             prim_root_p = pub_info.prim_root_p;
-             pub_key_client = msg.pub_key_client;
-             dh_encrypted =
-               encrypt_dh
-                 (Z.to_string shared_key)
-                 "encryption test is working";
-           })
-        w
-  | "diffie_3" -> ()
+  | "diffie_1" -> diffie_1 msg w
   | "random_challenge" -> rand_challenge msg w
-  | "login" -> ()
-  | "register" -> () (* TODO *)
   | "post_auth" ->
       msg.dh_encrypted
       |> decrypt_dh (get_key msg.id !info_lst)
       |> str_to_msg |> handle_enc_msg w msg
-      (* post auth it will decrypt diffie, which will be a msg str, and
-         then call handle_enc_msg to parse the msg*)
-  | _ ->
-      let _ = print_string ("Msg Recieved: " ^ msg_to_str msg) in
-      (* This is where it writes str to the file *)
-      let oc = Out_channel.create ~append:true f in
-      Out_channel.output_string oc (msg_to_str msg);
-      Out_channel.close oc;
-      Out_channel.flush oc;
-      (* TODO: add message here about the possibility of quitting once
-         it gets up and running *)
-      send_str
-        "Message Recieved! Type another message in the format \
-         \"[name]: [msg]\" and hit enter to send: \n\n"
-        w
+  | _ -> failwith "Error: unkown message operation"
 
 (* [store_msg buffer r w f] uses reader [r] to read data from [buffer]
    and appends it to file [f]. If file [f] does not exist, [f] will be
@@ -235,7 +220,6 @@ let rec recieve buffer r w f =
       (* str now contains the data that was in the buffer, converted to
          a string *)
       let str = Bytes.to_string read in
-      let _ = print_string str in
       let msg = str_to_msg str in
       handle_msg msg w f;
       recieve buffer r w f
@@ -245,13 +229,11 @@ let rec recieve buffer r w f =
 let perform_tasks w r =
   let buffer = Bytes.create (16 * 1024) in
   recieve buffer r w msg_file
-(* old code: send_msgs w msg_file; send_str "Type your message in the
-   format \"[name]: [msg]\" and hit enter \ to send: \n\n" w; *)
 
 (** Starts a TCP server, which listens on the specified port, calling
     all of the function in [perform_tasks] *)
 let run () =
-  print_string "Server Running";
+  print_string "\nServer Running\n";
 
   let host_and_port =
     Tcp.Server.create ~on_handler_error:`Raise

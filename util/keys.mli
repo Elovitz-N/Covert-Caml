@@ -82,14 +82,15 @@ type pub_info = {
   mod_p : Z.t;
   prim_root_p : Z.t;
 }
+(**[pub_info] is the type representing the public info used to generate
+   keys in Diffie Hellman.*)
 
 type rsa_keys = {
   private_key : Z.t;
   public_key : Z.t * Z.t;
 }
-
-(**[pub_info] is the type representing the public info used to generate
-   keys in Diffie Hellman.*)
+(**[rsa_keys] is the type representing an RSA private key, public key
+   pair.*)
 
 val dh_get_public_key : dh_keys -> string
 (**[dh_get_public_key k] is the public key of the Diffie-Hellamn public

@@ -134,11 +134,8 @@ let rec update_list key v check_k check_v json_lst delete_msgs =
       let cv = h |> member check_k in
       if cv = check_v then
         match h |> member key with
-        | `String v' ->
-            let _ = print_string "match found" in
-            update_k key v h :: t
+        | `String v' -> update_k key v h :: t
         | `List messages ->
-            print_string "\n deep deep list found \n";
             if delete_msgs then update_k key (`List []) h :: t
             else
               let j = v :: messages in
@@ -176,7 +173,6 @@ let update key v check_k check_v (json : Yojson.Basic.t) delete_msgs add
     =
   match json with
   | `Assoc obj ->
-      print_string "assoc found";
       `Assoc (update_json obj key v check_k check_v delete_msgs add)
   | _ -> json
 
@@ -270,30 +266,3 @@ let create_db () =
   else
     let json = from_string "{\"users\":[]}" in
     to_file file json
-
-(* NOTE: delete this fctn before final submission*)
-let test_write () =
-  print_string "testing";
-  print_newline ();
-  let j = from_file file in
-  let new_j =
-    update "username" (`String "test6") "session id"
-      (`String "sdafj434jnl34g33il4h3") j false false
-  in
-  to_file "../data/test.json" new_j;
-  let j = from_file file in
-  let msg = from_string "{\"username\":\"bob\",\"message\":\"woah\"}" in
-  let new_j =
-    update "new messages" msg "session id"
-      (`String "sdafj434jnl34g33il4h3") j true false
-  in
-  to_file "../data/test2.json" new_j;
-  let j = from_file "../data/test2.json" in
-  let msg = from_string "{\"username\":\"bob\",\"message\":\"woah\"}" in
-  let new_j =
-    update "new messages" msg "session id"
-      (`String "sdafj434jnl34g33il4h3") j false false
-  in
-  to_file "../data/test3.json" new_j;
-  add_user "sess" "dummyu" "dummyp";
-  print_newline ()

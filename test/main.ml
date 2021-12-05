@@ -228,6 +228,7 @@ let suite =
   "Testing"
   >::: List.flatten
          [
+           keys_tests';
            process_tests;
            encrypted_str_tests;
            str_to_msg_tests;

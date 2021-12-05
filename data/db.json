@@ -1,1 +1,16 @@
-{"users":[{"session id":"1685749551029833469","username":"admin","password":"admin","new messages":[]},{"session id":"414772227682220303","username":"tlea","password":"ll","new messages":[]},{"session id":"608484095821337991","username":"wonderwoman","password":"true","new messages":[]},{"session id":"48777721920896182","username":"login","password":"passwd","new messages":[{"username":"wonderwoman","message":"heyyyy"}]},{"session id":"295892784993576939","username":"superman","password":"tt","new messages":[]},{"session id":"507784019622065002","username":"super","password":"df","new messages":[]},{"session id":"509671649376158350","username":"hhhh","password":"ht","new messages":[]},{"session id":"7741385413427206","username":"testing","password":"tt","new messages":[]},{"session id":"fhgjfsdaifhua2wn22nsdf","dh key":"test_key2","username":"jstawinski","password":"test","new messages":[{"username":"Likita","message":"Hey, how are you?"},{"username":"Nadav","message":"Hi John"}]},{"session id":"sdafj434jnl34g33il4h3","dh key":"test_key1","username":"Likita","password":"test123","new messages":[{"username":"jstawinski","message":"Hey, how are you?"}]}]}
+{
+  "users": [
+    {
+      "session id": "91467402834878200",
+      "username": "test",
+      "password": "test",
+      "new messages": []
+    },
+    {
+      "session id": "104991876837206142",
+      "username": "admin",
+      "password": "admin",
+      "new messages": []
+    }
+  ]
+}
