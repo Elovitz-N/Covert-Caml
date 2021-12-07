@@ -1,3 +1,7 @@
+## Server Setup:
+1) In order to ensure security, the server should be kept in a room that prevents unauthorized access to the server.
+2) If this is the first time the server is being run, navigate to the root directory of the repository and run "...
+
 ## MS2 Instructions:
 1) Clone the repository, and navigate to the root directory of the repository
 2) Make sure the packages Core, Async, and Zarith are installed. To do this run "opam install core", "opam install async", and "opam install zarith".
