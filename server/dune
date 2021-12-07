@@ -1,4 +1,3 @@
 (executable
  (name server)
- (public_name Server)
  (libraries core async util))
