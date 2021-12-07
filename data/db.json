@@ -1,46 +1,16 @@
 {
   "users": [
     {
-      "session id": "sess",
-      "dh key": "dh",
-      "username": "dummyu",
-      "password": "dummyp",
-      "new messages": []
-    },
-    {
-      "session id": "sess",
-      "dh key": "dh",
-      "username": "dummyu",
-      "password": "dummyp",
-      "new messages": []
-    },
-    {
-      "session id": "fhgjfsdaifhua2wn22nsdf",
-      "dh key": "test_key2",
-      "username": "jstawinski",
+      "session id": "91467402834878200",
+      "username": "test",
       "password": "test",
-      "new messages": [
-        {
-          "username": "Likita",
-          "message": "Hey, how are you?"
-        },
-        {
-          "username": "Nadav",
-          "message": "Hi John"
-        }
-      ]
+      "new messages": []
     },
     {
-      "session id": "sdafj434jnl34g33il4h3",
-      "dh key": "test_key1",
-      "username": "Likita",
-      "password": "test123",
-      "new messages": [
-        {
-          "username": "jstawinski",
-          "message": "Hey, how are you?"
-        }
-      ]
+      "session id": "104991876837206142",
+      "username": "admin",
+      "password": "admin",
+      "new messages": []
     }
   ]
 }
