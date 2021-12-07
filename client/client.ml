@@ -222,35 +222,44 @@ let send s =
 let handshake s =
   send_str (msg_to_str { empty_msg with op = "init"; id = uid }) s
 
-let main () =
+let rec main () : unit =
   (* NOTE: the issue with these statements not printing was the buffer
      was never being flushed. To fix, I can use [fprintf "%s%!" str]
      where the %! arg ensures that the buffer will flush. For debugging
      within the threads, I should create and clear a log file at the
      beginning of main and then have the threads write the debug
      statements to the log file. *)
-  fprintf Stdlib.stdout "%s %!" "Connecting to Server...\n";
+  (* fprintf Stdlib.stdout "%s %!" "Connecting to Server...\n"; *)
   (* TODO: check more aggressively to make sure host is a valid IP
      addr *)
-  (if Array.length Sys.argv < 2 then
-   let _ =
-     fprintf Stdlib.stdout "%s %!"
-       "\n\
-        Missing Host IP address. To run, use ./client/client.exe <host>\n"
-   in
-   exit 2);
-  (if Array.length Sys.argv > 2 then
-   let _ =
-     fprintf Stdlib.stdout "%s %!"
-       "\nToo many arguments. To run, use ./client/client.exe <host> \n"
-   in
-   exit 2);
-
-  let ip = Sys.argv.(1) in
+  (* (if Array.length Sys.argv < 2 then let _ = fprintf Stdlib.stdout
+     "%s %!" "\n\ Missing Host IP address. To run, use
+     ./client/client.exe <host>\n" in exit 2); (if Array.length Sys.argv
+     > 2 then let _ = fprintf Stdlib.stdout "%s %!" "\nToo many
+     arguments. To run, use ./client/client.exe <host> \n" in exit
+     2); *)
+  let r = Str.regexp "[0-9]+.[0-9]+.[0-9]+.[0-9]+" in
+  fprintf Stdlib.stdout "%s %!"
+    "Connect to IP address or type \"quit\" to quit:\n";
+  let ip =
+    let s = read_line () in
+    if Str.string_match r s 0 then s
+    else
+      match s with
+      | "quit" | "q" -> exit 0
+      | _ ->
+          print_endline "Not a valid IP Address";
+          main ();
+          exit 0
+  in
   let port = 8886 in
   let socket = socket PF_INET SOCK_STREAM 0 in
   (* TODO: figure out why all these print statements never print! *)
-  connect socket (ADDR_INET (inet_addr_of_string ip, port));
+  fprintf Stdlib.stdout "%s %!" "Connecting to Server...\n";
+  (try connect socket (ADDR_INET (inet_addr_of_string ip, port))
+   with Unix.Unix_error (Unix.ECONNREFUSED, _, _) ->
+     print_endline "Could not connect";
+     main ());
   handshake socket;
   recieve_init socket
 (* match fork () with | 0 -> (* Write to socket (send a msg) *) send
