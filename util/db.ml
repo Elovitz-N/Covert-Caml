@@ -14,7 +14,7 @@
 open Yojson.Basic.Util
 open Yojson.Basic
 
-let file = "../data/db.json"
+let file = "data/db.json"
 
 type username = string
 

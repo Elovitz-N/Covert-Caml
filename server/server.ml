@@ -11,9 +11,9 @@ let (info_lst : info list ref) = ref []
 (* [send_str s w] sends string [s] using writer [w]. *)
 let send_str s w = Writer.write w s ~len:(String.length s)
 
-let db_file = "../data/db.json"
+let db_file = "data/db.json"
 
-let msg_file = "../data/msgs.json"
+let msg_file = "data/msgs.json"
 
 let rsa_keys =
   ref { private_key = Z.zero; public_key = (Z.zero, Z.zero) }
@@ -261,11 +261,11 @@ let gen_rsa_keys () =
     \ "
 
 let load_rsa_keys () =
-  match Core.In_channel.read_lines "../server/public_key.txt" with
+  match Core.In_channel.read_lines "server/public_key.txt" with
   | [ x; y ] -> (
       rsa_keys :=
         { !rsa_keys with public_key = (Z.of_string x, Z.of_string y) };
-      match Core.In_channel.read_lines "../server/private_key.txt" with
+      match Core.In_channel.read_lines "server/private_key.txt" with
       | [ x ] ->
           rsa_keys := { !rsa_keys with private_key = Z.of_string x }
       | _ -> failwith "Invalid key found at /server/private_key.txt")
@@ -283,12 +283,16 @@ let () =
         in
         gen_rsa_keys ()
   | _ -> (
-      match Core.In_channel.read_lines "private_key.txt" with
-      | [] ->
+      let lst =
+        try Core.In_channel.read_lines "server/private_key.txt"
+        with _ -> [ "failure" ]
+      in
+      match lst with
+      | [ "failure" ] ->
           failwith
             "No private key found. Try running dune exec ./server.exe \
              keygen"
-      | key :: _ ->
+      | _ ->
           create_db ();
           load_rsa_keys ();
           let _ = run () in

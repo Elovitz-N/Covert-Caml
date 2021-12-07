@@ -281,7 +281,7 @@ let handshake s =
   send_str (msg_to_str { empty_msg with op = "init"; id = uid }) s
 
 let load_pub_key () =
-  match Core.In_channel.read_lines "public_key.txt" with
+  match Core.In_channel.read_lines "client/public_key.txt" with
   | [ x; y ] -> rsa_pub_key := (x, y)
   | _ -> failwith "Invalid key found at /client/public_key.txt"
 
