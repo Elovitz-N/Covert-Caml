@@ -1,3 +1,22 @@
+(* Keys:
+
+   For the Keys compliation unit, which does the computation behind
+   encryption, we used QCheck testing since encryption should be able to
+   handle any random string the user throws at it and since primes are
+   generated randomly each time.
+
+   Each part of the block cypher encryption algorithm is tested
+   individually on whether it encrypts then decrypts to the same. This
+   lets us catch mistakes in each individual element.
+
+   The s-box permutation on a character is tested on every possible
+   value because its data was inputed manually and thus prone to error.
+
+   The Diffie Hellman key exchange is only tested on whether the shared
+   keys match since it was impossible to predict the results of the
+   random prime generation (indeed for it to be secure this must be
+   infeasible).*)
+
 open OUnit2
 open Yojson.Basic.Util
 open Util.Msg
