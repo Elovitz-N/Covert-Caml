@@ -98,7 +98,7 @@ let rec handle_success msg socket : string =
   fprintf Stdlib.stdout "%s %!"
     "\n\
      Type \"login\" and hit enter to login, or type \"register\" and \
-     hit enter to register.\n\n";
+     hit enter to register. Type \"quit\" to quit.\n\n";
   let cmd = read_line () in
   match cmd with
   | "login" ->
@@ -107,6 +107,7 @@ let rec handle_success msg socket : string =
   | "register" ->
       handle_register msg socket;
       ""
+  | "quit" | "q" -> exit 0
   | _ ->
       fprintf Stdlib.stdout "%s %!"
         "\nInvalid value. Please try again.\n";
