@@ -353,51 +353,55 @@ let rec trim_string s =
     trim_string (Str.string_before s (String.length s - 1))
   else s
 
+(**[encrypt_str s ks] encrypts a 16 byte string [s] using AES and the
+   sequence of keys [ks].*)
+let rec encrypt_str str = function
+  | [] | [ _ ] -> failwith "Impossible"
+  | [ k1; k2 ] ->
+      ByteMatrix.(
+        sum str k1 |> of_string |> s_box |> shift_rows |> to_string
+        |> sum k2)
+      (*The last round doesn't mix columns.*)
+  | k1 :: k2 :: t ->
+      encrypt_str
+        ByteMatrix.(
+          sum str k1 |> of_string |> s_box |> shift_rows |> mix_column
+          |> to_string)
+        (k2 :: t)
+
 let encrypt_dh k s =
   let plain_txt = split_string 16 s in
   let key_sched = create_key_sched k in
-  let rec encrypt_str str = function
-    | [] | [ _ ] -> failwith "Impossible"
-    | [ k1; k2 ] ->
-        ByteMatrix.(
-          sum str k1 |> of_string |> s_box |> shift_rows |> to_string
-          |> sum k2)
-        (*The last round doesn't mix columns.*)
-    | k1 :: k2 :: t ->
-        encrypt_str
-          ByteMatrix.(
-            sum str k1 |> of_string |> s_box |> shift_rows |> mix_column
-            |> to_string)
-          (k2 :: t)
-  in
   List.fold_left
     (fun acc x -> acc ^ encrypt_str x key_sched)
     "" plain_txt
 
+(**[decrypt_str s ks] decrypts a 16 byte string [s] using AES and the
+   sequence of keys [ks].*)
+let decrypt_str str = function
+  | [] -> failwith "Impossible"
+  | k :: ks ->
+      let str' =
+        ByteMatrix.(
+          sum str k |> of_string |> inv_shift_rows |> inv_s_box
+          |> to_string)
+        (*The first round doesn't unmix columns*)
+      in
+      let rec decrypt_str_aux str = function
+        | [] -> failwith "Impossible"
+        | [ k ] -> sum str k
+        | h :: t ->
+            decrypt_str_aux
+              ByteMatrix.(
+                sum str h |> of_string |> inv_mix_column
+                |> inv_shift_rows |> inv_s_box |> to_string)
+              t
+      in
+      decrypt_str_aux str' ks
+
 let decrypt_dh k s =
   let cypher_txt = split_string 16 s in
   let key_sched = create_key_sched k |> List.rev in
-  let decrypt_str str = function
-    | [] -> failwith "Impossible"
-    | k :: ks ->
-        let str' =
-          ByteMatrix.(
-            sum str k |> of_string |> inv_shift_rows |> inv_s_box
-            |> to_string)
-          (*The first round doesn't unmix columns*)
-        in
-        let rec decrypt_str_aux str = function
-          | [] -> failwith "Impossible"
-          | [ k ] -> sum str k
-          | h :: t ->
-              decrypt_str_aux
-                ByteMatrix.(
-                  sum str h |> of_string |> inv_mix_column
-                  |> inv_shift_rows |> inv_s_box |> to_string)
-                t
-        in
-        decrypt_str_aux str' ks
-  in
   List.fold_left
     (fun acc x -> acc ^ (decrypt_str x key_sched |> trim_string))
     "" cypher_txt
