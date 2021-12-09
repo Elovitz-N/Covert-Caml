@@ -1,3 +1,4 @@
+module StdUnix = Unix
 open Core
 open Async
 open Sys
@@ -233,16 +234,26 @@ let perform_tasks w r =
 (** Starts a TCP server, which listens on the specified port, calling
     all of the function in [perform_tasks] *)
 let run () =
-  print_string "\nServer Running\n";
-
-  let host_and_port =
-    Tcp.Server.create ~on_handler_error:`Raise
-      (Tcp.Where_to_listen.of_port 8886) (fun _addr r w ->
-        perform_tasks w r)
-  in
-  ignore
-    (host_and_port
-      : (Socket.Address.Inet.t, int) Tcp.Server.t Deferred.t)
+  print_string "\nServer Running, type \"quit\" to quit.\n";
+  match StdUnix.fork () with
+  | 0 ->
+      let host_and_port =
+        Tcp.Server.create ~on_handler_error:`Raise
+          (Tcp.Where_to_listen.of_port 8886) (fun _addr r w ->
+            perform_tasks w r)
+      in
+      ignore
+        (host_and_port
+          : (Socket.Address.Inet.t, int) Tcp.Server.t Deferred.t)
+  | v ->
+      let rec query_quit () =
+        match Stdlib.read_line () with
+        | "q" | "quit" ->
+            StdUnix.kill v 1;
+            Stdlib.exit 0
+        | _ -> query_quit ()
+      in
+      query_quit ()
 
 let gen_rsa_keys () =
   let { private_key = p; public_key = k1, k2 } = create_rsa_keys () in
@@ -289,8 +300,8 @@ let run_server () =
 (*query regen keys then call [run_server]*)
 let () =
   Core.fprintf Stdlib.stdout "%s %!"
-    "Regenerate keys? (y/n). This is recommended when starting a \
-     server for the first time.";
+    "Regenerate keys? (y/n). This is strongly recommended when \
+     starting a server for the first time.";
   let rec query_keygen () =
     match Stdlib.read_line () with
     | "y" ->
