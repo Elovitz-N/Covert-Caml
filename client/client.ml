@@ -308,7 +308,8 @@ let rec main () : unit =
      addr *)
   let r = Str.regexp "[0-9]+.[0-9]+.[0-9]+.[0-9]+" in
   fprintf Stdlib.stdout "%s %!"
-    "Connect to IP address or type \"quit\" to quit:\n";
+    "Type in the server IP address and hit enter to connect, or type \
+     \"quit\" to quit:\n";
   let ip =
     let s = read_line () in
     if Str.string_match r s 0 then s

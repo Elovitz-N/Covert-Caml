@@ -301,7 +301,9 @@ let run_server () =
 let () =
   Core.fprintf Stdlib.stdout "%s %!"
     "Regenerate keys? (y/n). This is strongly recommended when \
-     starting a server for the first time.";
+     starting a server for the first time. If the server public and \
+     private keys already exist, it is not recommended to regenerate \
+     unless a key has been compromised.";
   let rec query_keygen () =
     match Stdlib.read_line () with
     | "y" ->
