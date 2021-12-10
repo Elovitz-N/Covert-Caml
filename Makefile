@@ -20,4 +20,7 @@ server:
 client:
 	OCAMLRUNPARAM=b dune exec client/client.exe
 
+doc:
+	dune build @doc
+
 

@@ -98,7 +98,7 @@ let rec handle_success msg socket : string =
   fprintf Stdlib.stdout "%s %!"
     "\n\
      Type \"login\" and hit enter to login, or type \"register\" and \
-     hit enter to register.\n\n";
+     hit enter to register. Type \"quit\" to quit.\n\n";
   let cmd = read_line () in
   match cmd with
   | "login" ->
@@ -107,6 +107,7 @@ let rec handle_success msg socket : string =
   | "register" ->
       handle_register msg socket;
       ""
+  | "quit" | "q" -> exit 0
   | _ ->
       fprintf Stdlib.stdout "%s %!"
         "\nInvalid value. Please try again.\n";
@@ -285,6 +286,23 @@ let load_pub_key () =
   | [ x; y ] -> rsa_pub_key := (x, y)
   | _ -> failwith "Invalid key found at /client/public_key.txt"
 
+exception Connect_Error of string
+
+(**[compute_timeout t f] computes [f] and aborts if it doesn't complete
+   in [t] seconds.*)
+let compute_timeout t f =
+  try
+    match Unix.fork () with
+    | 0 ->
+        sleepf t;
+        raise (Connect_Error "\nAddress inaccessible")
+    | v ->
+        f ();
+        kill v sigterm
+  with Connect_Error v ->
+    print_endline v;
+    kill 0 sigterm
+
 let rec main () : unit =
   (* TODO: check more aggressively to make sure host is a valid IP
      addr *)
@@ -298,9 +316,9 @@ let rec main () : unit =
       match s with
       | "quit" | "q" -> exit 0
       | _ ->
-          print_endline "Not a valid IP Address";
+          print_endline "\nNot a valid IP Address";
           main ();
-          exit 0
+          ""
   in
   let port = 8886 in
   let socket = socket PF_INET SOCK_STREAM 0 in
@@ -310,10 +328,11 @@ let rec main () : unit =
   load_pub_key ();
 
   fprintf Stdlib.stdout "%s %!" "Connecting to Server...\n";
-  (try connect socket (ADDR_INET (inet_addr_of_string ip, port))
-   with Unix.Unix_error (Unix.ECONNREFUSED, _, _) ->
-     print_endline "Could not connect";
-     main ());
+  (fun _ ->
+    try connect socket (ADDR_INET (inet_addr_of_string ip, port))
+    with Unix.Unix_error (Unix.ECONNREFUSED, _, _) ->
+      raise (Connect_Error "\nServer not running"))
+  |> compute_timeout 5.;
   handshake socket;
   recieve_init socket
 ;;

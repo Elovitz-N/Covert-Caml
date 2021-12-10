@@ -1,3 +1,4 @@
+module StdUnix = Unix
 open Core
 open Async
 open Sys
@@ -233,23 +234,33 @@ let perform_tasks w r =
 (** Starts a TCP server, which listens on the specified port, calling
     all of the function in [perform_tasks] *)
 let run () =
-  print_string "\nServer Running\n";
-
-  let host_and_port =
-    Tcp.Server.create ~on_handler_error:`Raise
-      (Tcp.Where_to_listen.of_port 8886) (fun _addr r w ->
-        perform_tasks w r)
-  in
-  ignore
-    (host_and_port
-      : (Socket.Address.Inet.t, int) Tcp.Server.t Deferred.t)
+  print_string "\nServer Running, type \"quit\" to quit.\n";
+  match StdUnix.fork () with
+  | 0 ->
+      let host_and_port =
+        Tcp.Server.create ~on_handler_error:`Raise
+          (Tcp.Where_to_listen.of_port 8886) (fun _addr r w ->
+            perform_tasks w r)
+      in
+      ignore
+        (host_and_port
+          : (Socket.Address.Inet.t, int) Tcp.Server.t Deferred.t)
+  | v ->
+      let rec query_quit () =
+        match Stdlib.read_line () with
+        | "q" | "quit" ->
+            StdUnix.kill v 1;
+            Stdlib.exit 0
+        | _ -> query_quit ()
+      in
+      query_quit ()
 
 let gen_rsa_keys () =
   let { private_key = p; public_key = k1, k2 } = create_rsa_keys () in
   let pub = Z.to_string k1 ^ "\n" ^ Z.to_string k2 in
-  Out_channel.write_all "public_key.txt" ~data:pub;
+  Out_channel.write_all "server/public_key.txt" ~data:pub;
   let priv = Z.to_string p in
-  Out_channel.write_all "private_key.txt" ~data:priv;
+  Out_channel.write_all "server/private_key.txt" ~data:priv;
   Core.fprintf Stdlib.stdout "%s %!"
     "\n\
      RSA private key, public key created. Private key is stored in \
@@ -271,29 +282,34 @@ let load_rsa_keys () =
       | _ -> failwith "Invalid key found at /server/private_key.txt")
   | _ -> failwith "Invalid key found at /server/private_key.txt"
 
-(* Call [run], and then start the scheduler *)
+(**[run_server ()] calls [run], and then starts the scheduler.*)
+let run_server () =
+  let lst =
+    try Core.In_channel.read_lines "server/private_key.txt"
+    with _ -> [ "failure" ]
+  in
+  match lst with
+  | [ "failure" ] ->
+      failwith "No private key found. Try regenerating keys."
+  | _ ->
+      create_db ();
+      load_rsa_keys ();
+      let _ = run () in
+      never_returns (Scheduler.go ())
+
+(*query regen keys then call [run_server]*)
 let () =
-  let args = Sys.get_argv () in
-  match Array.length args with
-  | 2 ->
-      if String.equal args.(1) "keygen" then
-        let _ =
-          Core.fprintf Stdlib.stdout "%s %!"
-            "\nGenerating RSA public key, private key... \n"
-        in
-        gen_rsa_keys ()
-  | _ -> (
-      let lst =
-        try Core.In_channel.read_lines "server/private_key.txt"
-        with _ -> [ "failure" ]
-      in
-      match lst with
-      | [ "failure" ] ->
-          failwith
-            "No private key found. Try running dune exec ./server.exe \
-             keygen"
-      | _ ->
-          create_db ();
-          load_rsa_keys ();
-          let _ = run () in
-          never_returns (Scheduler.go ()))
+  Core.fprintf Stdlib.stdout "%s %!"
+    "Regenerate keys? (y/n). This is strongly recommended when \
+     starting a server for the first time.";
+  let rec query_keygen () =
+    match Stdlib.read_line () with
+    | "y" ->
+        Core.fprintf Stdlib.stdout "%s %!"
+          "\nGenerating RSA public key, private key... \n";
+        gen_rsa_keys ();
+        run_server ()
+    | "n" -> run_server ()
+    | _ -> query_keygen ()
+  in
+  query_keygen ()
