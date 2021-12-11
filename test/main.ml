@@ -15,7 +15,27 @@
    The Diffie Hellman key exchange is only tested on whether the shared
    keys match since it was impossible to predict the results of the
    random prime generation (indeed for it to be secure this must be
-   infeasible).*)
+   infeasible).
+
+   Msg and Db:
+
+   For the Msg and Db compilation units, we used standard Ocaml testing
+   to test the individual functions. Some functions in these files could
+   not be automatically tested in Ocaml as they involved file
+   manipulation. These functions we tested manually by applying a
+   variety of inputs and then reviewing the files changes to see if the
+   functions behaved as expected. Functions that do not fall under this
+   category are tested in this file.
+
+   Client and Server:
+
+   For the client and server compilation units, all functions depend on
+   TCP connections and thus cannot be tested automatically. We tested
+   these functions extensively by manually testing the each piece of the
+   applications as they were built. We also did a full usuability test
+   at the end by running both programs and then moving through every
+   possible client and server workflow to ensure that the programs
+   behaved as expected.*)
 
 open OUnit2
 open Yojson.Basic.Util
