@@ -3,71 +3,71 @@ module GaloisField : sig
   (**[t] is the type of an element of a Galois field.*)
 
   val add : t -> t -> t
-  (**[add a b] is the sum of [a] and [b] in the field.*)
+  (**[add a b] returns the sum of [a] and [b] in the field.*)
 
   val p : t
-  (**[p] is the irreducible polynomial in the field used for
+  (**[p] returns the irreducible polynomial in the field used for
      multiplication. It should not be used as an element of the field
      for computation.*)
 
   val mul : t -> t -> t
-  (**[mul a b] is [a] multiplied by [b] in the field using [p] as the
-     mod.*)
+  (**[mul a b] returns [a] multiplied by [b] in the field using [p] as
+     the mod.*)
 
   val of_char : char -> t
-  (**[of_char c] is the unique element of GF(2^8) associated with any
-     character [c].*)
+  (**[of_char c] returns the unique element of GF(2^8) associated with
+     any character [c].*)
 
   val to_char : t -> char
-  (**[to_char t] is the unique ascii character associated with the
+  (**[to_char t] returns the unique ascii character associated with the
      element of GF(2^8) [t]*)
 
   val s_box : t -> t
-  (**[s_box t] is an element of the field GF(2^8) permuted by the
+  (**[s_box t] returns an element of the field GF(2^8) permuted by the
      conversion s_box table.*)
 
   val inv_s_box : t -> t
-  (**[inv_s_box t] is the inverse permutation of [s_box t].*)
+  (**[inv_s_box t] returns the inverse permutation of [s_box t].*)
 end
 
 module ByteMatrix : sig
   type t
-  (**[t] is the type representing a 4x4 square matrix of bytes.*)
+  (**[t] returns the type representing a 4x4 square matrix of bytes.*)
 
   val of_string : string -> t
-  (**[of_string s] is a matrix of bytes made from the 16 character
+  (**[of_string s] returns a matrix of bytes made from the 16 character
      string [s].*)
 
   val to_string : t -> string
-  (**[to_string t] is the byte matrix [t] flattened into a 16 character
-     string column by column.*)
+  (**[to_string t] returns the byte matrix [t] flattened into a 16
+     character string column by column.*)
 
   val mul : t -> t -> t
-  (**[mul a b] is the matrix multiplication [ab] in the Galois field
-     GF(2^8).*)
+  (**[mul a b] returns the matrix multiplication [ab] in the Galois
+     field GF(2^8).*)
 
   val s_box : t -> t
-  (**[s_box t] is the matrix [t] with each entry permuted by the AES
-     s-box.*)
+  (**[s_box t] returns the matrix [t] with each entry permuted by the
+     AES s-box.*)
 
   val inv_s_box : t -> t
-  (**[inv_s_box t] is the matrix [t] with each entry permuted by the
-     inverse s-box permutation.*)
+  (**[inv_s_box t] returns the matrix [t] with each entry permuted by
+     the inverse s-box permutation.*)
 
   val shift_rows : t -> t
-  (**[shift_rows t] is the matrix [t] with rows shifted by the AES shift
-     rows operation.*)
+  (**[shift_rows t] returns the matrix [t] with rows shifted by the AES
+     shift rows operation.*)
 
   val inv_shift_rows : t -> t
-  (**[inv_shift_rows t] is the matrix [t] with rows shifted by the
+  (**[inv_shift_rows t] returns the matrix [t] with rows shifted by the
      inverse of the AES shift rows operation.*)
 
   val mix_column : t -> t
-  (**[mix_column t] is the matrix [t] with colums mixed by the AES
+  (**[mix_column t] returns the matrix [t] with colums mixed by the AES
      column mixing operation.*)
 
   val inv_mix_column : t -> t
-  (**[inv_mix_column t] is the matrix [t] with colums mixed by the
+  (**[inv_mix_column t] returns the matrix [t] with colums mixed by the
      invers of the AES column mixing operation.*)
 end
 
@@ -89,46 +89,47 @@ type rsa_keys = {
   private_key : Z.t;
   public_key : Z.t * Z.t;
 }
-(**[rsa_keys] is the type representing an RSA private key, public key
-   pair.*)
+(**[rsa_keys] returns the type representing an RSA private key, public
+   key pair.*)
 
 val dh_get_public_key : dh_keys -> string
-(**[dh_get_public_key k] is the public key of the Diffie-Hellamn public
-   key, private key pair [k] as a string.*)
+(**[dh_get_public_key k] returns the public key of the Diffie-Hellamn
+   public key, private key pair [k] as a string.*)
 
 val dh_pub_info : unit -> pub_info
-(**[dh_pub_info ()] is a new public info used for diffie-hellman key
-   exchange and encryption.*)
+(**[dh_pub_info ()] returns a new public info used for diffie-hellman
+   key exchange and encryption.*)
 
 val create_dh_keys : pub_info -> dh_keys
-(**[create_dh_keys p] is a new private key, public key pair for
+(**[create_dh_keys p] returns a new private key, public key pair for
    diffie-hellman key exchange before the shared key is generated.*)
 
 val create_dh_shared_key : dh_keys -> string -> pub_info -> dh_keys
-(**[create_dh_keys k s p] is the keys [k] updated with the shared key
-   generated using [s] as the partner's public key and p as the public
-   info.*)
+(**[create_dh_keys k s p] returns the keys [k] updated with the shared
+   key generated using [s] as the partner's public key and p as the
+   public info.*)
 
 val encrypt_dh : string -> string -> string
-(**[encrypt_dh k s] is the string [s] encrypted using AES in blocks in
-   ECB mode with the diffie-hellman shared private key [k].*)
+(**[encrypt_dh k s] returns the string [s] encrypted using AES in blocks
+   in ECB mode with the diffie-hellman shared private key [k].*)
 
 val decrypt_dh : string -> string -> string
-(**[decrypt_dh k s] is the string [s] decrypted using AES in blocks in
-   ECB mode with the diffie-hellman shared private key [k].*)
+(**[decrypt_dh k s] returns the string [s] decrypted using AES in blocks
+   in ECB mode with the diffie-hellman shared private key [k].*)
 
 val rsa_get_public_key : rsa_keys -> string * string
-(**[rsa_get_public_key k] is the RSA public key pair of the public key,
-   private key pair [k] as a string tuple.*)
+(**[rsa_get_public_key k] returns the RSA public key pair of the public
+   key, private key pair [k] as a string tuple.*)
 
 val create_rsa_keys : unit -> rsa_keys
-(**[create_rsa_keys ()] is a new public key, private pair used for rsa
-   encryption.*)
+(**[create_rsa_keys ()] returns a new public key, private pair used for
+   rsa encryption.*)
 
 val encrypt_rsa : string * string -> string -> string list
-(**[encrypt_rsa k s] is the string [s] encrypted using the RSA public
-   key pair [k] into blocks smaller than the size of the public modulus.
-   Requires: [k] is public key generated using [create_rsa_keys]*)
+(**[encrypt_rsa k s] returns the string [s] encrypted using the RSA
+   public key pair [k] into blocks smaller than the size of the public
+   modulus. Requires: [k] is public key generated using
+   [create_rsa_keys]*)
 
 val id_gen : int -> string -> string
 (** [id_gen n s] generates [n] random integers and returns the integers
@@ -138,5 +139,5 @@ val rand_int : int
 (** [rand_int] returns a random integer. **)
 
 val decrypt_rsa : rsa_keys -> string list -> string
-(**[decrypt_rsa k s] is the list of encrypted string blocks [s]
+(**[decrypt_rsa k s] returns the list of encrypted string blocks [s]
    decrypted using the private key in [k].*)

@@ -39,26 +39,25 @@ val encrypted_str : string -> string -> string
     the empty string if [keyword] is not found in [str]. *)
 
 val str_to_msg : string -> msg
-(** [str_to_msg str] converts the string [str] to a message based on
-    message field found in [str], where [str] is a string sent between
-    the client and server. *)
+(** [str_to_msg str] returns the string [str] converted to a message
+    based on message field found in [str], where [str] is a string sent
+    between the client and server. *)
 
 val msg_to_str : msg -> string
-(** [msg_to_str msg] converts msg [msg] into a string ready to be sent
-    between the client and server. *)
+(** [msg_to_str msg] returns the msg [msg] converted into a string ready
+    to be sent between the client and server. *)
 
 val extract_pub_info : msg -> pub_info
 (** [extract_pub_info msg] returns a value of type info that contains
     the public diffie hellman info associated with [msg] *)
 
 val dh_str_to_lst : string -> string list
-(** [dh_str_to_lst str] seperates [str] into a list based on occurences
-    of a keyword. *)
+(** [dh_str_to_lst str] returns a list of strings that is [str]
+    seperated into a list based on occurences of a keyword. *)
 
 val dh_lst_to_str : string list -> string
-(* [dh_lst_to_str lst] combines the elements of [lst] into a string
-   based on occurences of a keyword. Requires: [lst] is a string
-   list. *)
+(* [dh_lst_to_str lst] returns the elements of [lst[ combined into a
+   string based on occurences of a keyword. *)
 
 val get_key : string -> info list -> string
 (** [get_key id] returns the private diffie hellman key associated with
