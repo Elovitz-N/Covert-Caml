@@ -127,28 +127,27 @@ let handle_msg msg socket =
         socket
   | _ -> failwith "Message Sending Unsuccessful"
 
+let p_str =
+  "\n\
+   Available commands: \"send message\", \"list new messages\", \"list \
+   users\", \"quit\". Type a command and press enter. Note that after \
+   new messages are listed they will be deleted from the database for \
+   security purposes.\n\n"
+
+let list_help str socket msg =
+  send_str
+    (create_enc_msg
+       { msg with op = "post_auth" }
+       { empty_msg with op = str })
+    socket
+
 let rec prompt_cmd msg socket =
-  fprintf Stdlib.stdout "%s %!"
-    "\n\
-     Available commands: \"send message\", \"list new messages\", \
-     \"list users\", \"quit\". Type a command and press enter. Note \
-     that after new messages are listed they will be deleted from the \
-     database for security purposes.\n\n";
+  fprintf Stdlib.stdout "%s %!" p_str;
   let cmd = read_line () in
   match cmd with
   | "send message" -> handle_msg msg socket
-  | "list new messages" ->
-      send_str
-        (create_enc_msg
-           { msg with op = "post_auth" }
-           { empty_msg with op = "list_new_msgs" })
-        socket
-  | "list users" ->
-      send_str
-        (create_enc_msg
-           { msg with op = "post_auth" }
-           { empty_msg with op = "list_users" })
-        socket
+  | "list new messages" -> list_help "list_new_msgs" socket msg
+  | "list users" -> list_help "list_users" socket msg
   | "quit" ->
       fprintf Stdlib.stdout "%s %!" "\nExiting...\n";
       exit 0
@@ -173,6 +172,9 @@ let rand_response msg socket =
     handle_success msg socket
   else failwith "Random Challenge Failed"
 
+(* Note: this function is longer than 20 lines, but that is because of
+   the pattern matching possibilities. Helper functions in this case
+   would not simplify the code. *)
 let handle_enc_msg s parent_msg msg =
   match msg.op with
   | "reg_success" ->
@@ -303,31 +305,28 @@ let compute_timeout t f =
     print_endline v;
     kill 0 sigterm
 
-let rec main () : unit =
-  (* TODO: check more aggressively to make sure host is a valid IP
-     addr *)
+let rec ip_help r =
+  let s = read_line () in
+  if Str.string_match r s 0 then s
+  else
+    match s with
+    | "quit" | "q" -> exit 0
+    | _ ->
+        print_endline "\nNot a valid IP Address";
+        main ();
+        ""
+
+and main () : unit =
   let r = Str.regexp "[0-9]+.[0-9]+.[0-9]+.[0-9]+" in
   fprintf Stdlib.stdout "%s %!"
     "Type in the server IP address and hit enter to connect, or type \
      \"quit\" to quit:\n";
-  let ip =
-    let s = read_line () in
-    if Str.string_match r s 0 then s
-    else
-      match s with
-      | "quit" | "q" -> exit 0
-      | _ ->
-          print_endline "\nNot a valid IP Address";
-          main ();
-          ""
-  in
+  let ip = ip_help r in
   let port = 8886 in
   let socket = socket PF_INET SOCK_STREAM 0 in
   fprintf Stdlib.stdout "%s %!" "Initiating Handshake...\n";
   fprintf Stdlib.stdout "%s %!" "Loading Server Public Key...\n";
-
   load_pub_key ();
-
   fprintf Stdlib.stdout "%s %!" "Connecting to Server...\n";
   (fun _ ->
     try connect socket (ADDR_INET (inet_addr_of_string ip, port))

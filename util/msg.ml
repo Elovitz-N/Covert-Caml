@@ -38,7 +38,24 @@ let empty_msg =
     message = "";
   }
 
-let rec process lst msg =
+let rec p_m t msg y =
+  process t
+    {
+      msg with
+      message =
+        List.fold_left
+          (fun acc x ->
+            if String.contains x '=' || !found then
+              let _ = found := true in
+              acc
+            else acc ^ " " ^ x)
+          y t;
+    }
+
+(* Note: this function is longer than 20 lines, but that is because of
+   the pattern matching possibilities. Helper functions in this case
+   would not simplify the code. *)
+and process lst msg =
   found := false;
   match lst with
   | h :: t -> (
@@ -58,19 +75,7 @@ let rec process lst msg =
           | "uname" -> process t { msg with uname = y }
           | "password" -> process t { msg with password = y }
           | "reciever" -> process t { msg with reciever = y }
-          | "message" ->
-              process t
-                {
-                  msg with
-                  message =
-                    List.fold_left
-                      (fun acc x ->
-                        if String.contains x '=' || !found then
-                          let _ = found := true in
-                          acc
-                        else acc ^ " " ^ x)
-                      y t;
-                }
+          | "message" -> p_m t msg y
           | _ -> process t msg)
       | _ -> msg)
   | [] -> msg
